@@ -70,7 +70,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
-      <h1 className="mb-6 text-center text-2xl font-bold text-amber-900">
+      <h1 className="mb-6 text-center text-2xl font-bold text-amber-800">
         🔒 샘뜰 카페 관리자
       </h1>
       <form onSubmit={submit} className="space-y-3">
@@ -90,7 +90,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         )}
         <button
           type="submit"
-          className="w-full rounded-lg bg-amber-700 py-3 font-bold text-white hover:bg-amber-800"
+          className="w-full rounded-lg bg-amber-600 py-3 font-bold text-white hover:bg-amber-700"
         >
           입장
         </button>
@@ -189,7 +189,7 @@ function Dashboard() {
     <main className="mx-auto max-w-3xl px-4 py-8 pb-24">
       <header className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-amber-900">📋 주문 관리</h1>
+          <h1 className="text-2xl font-bold text-amber-800">📋 주문 관리</h1>
           <p className="text-sm text-gray-500">
             대기 중 주문 <span className="font-bold text-red-600">{pendingCount}</span>건
             · 실시간 자동 갱신
@@ -197,7 +197,7 @@ function Dashboard() {
         </div>
         <button
           onClick={() => setShowAddForm(true)}
-          className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-bold text-white hover:bg-amber-800"
+          className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700"
         >
           + 수동 주문
         </button>
@@ -211,7 +211,7 @@ function Dashboard() {
             onClick={() => setFilter(s)}
             className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition ${
               filter === s
-                ? "border-amber-700 bg-amber-700 text-white"
+                ? "border-amber-600 bg-amber-600 text-white"
                 : "border-gray-300 bg-white text-gray-600"
             }`}
           >
@@ -268,7 +268,7 @@ function OrderCard({
   });
 
   return (
-    <li className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <li className="rounded-xl border border-amber-100 bg-white p-4 shadow-sm">
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span
@@ -295,7 +295,7 @@ function OrderCard({
       )}
 
       <div className="flex items-center justify-between">
-        <span className="font-bold text-amber-800">{formatPrice(order.total)}</span>
+        <span className="font-bold text-amber-700">{formatPrice(order.total)}</span>
         <div className="flex gap-2">
           {/* 상태 직접 선택 */}
           <select
@@ -312,7 +312,7 @@ function OrderCard({
           {next && (
             <button
               onClick={() => onUpdateStatus(order, next)}
-              className="rounded-lg bg-amber-700 px-3 py-1.5 text-sm font-bold text-white hover:bg-amber-800"
+              className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-bold text-white hover:bg-amber-700"
             >
               {next}(으)로 →
             </button>
@@ -464,7 +464,7 @@ function ManualOrderModal({
 
           <button
             onClick={addItem}
-            className="w-full rounded-lg border border-amber-700 py-2 text-sm font-bold text-amber-800 hover:bg-amber-50"
+            className="w-full rounded-lg border border-amber-600 py-2 text-sm font-bold text-amber-700 hover:bg-amber-50"
           >
             + 항목 추가
           </button>
@@ -513,7 +513,7 @@ function ManualOrderModal({
           <button
             onClick={save}
             disabled={saving}
-            className="flex-1 rounded-xl bg-amber-700 py-3 font-bold text-white hover:bg-amber-800 disabled:opacity-50"
+            className="flex-1 rounded-xl bg-amber-600 py-3 font-bold text-white hover:bg-amber-700 disabled:opacity-50"
           >
             {saving ? "저장 중..." : "주문 추가"}
           </button>

@@ -96,7 +96,7 @@ export default function CustomerPage() {
         </p>
         <button
           onClick={() => setDoneOrderName(null)}
-          className="mt-8 rounded-lg bg-amber-700 px-6 py-3 font-semibold text-white hover:bg-amber-800"
+          className="mt-8 rounded-lg bg-amber-600 px-6 py-3 font-semibold text-white hover:bg-amber-700"
         >
           새 주문 하기
         </button>
@@ -107,9 +107,9 @@ export default function CustomerPage() {
   return (
     <main className="mx-auto max-w-2xl px-4 pb-48 pt-8">
       {/* 헤더 */}
-      <header className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-amber-900">☕ 샘뜰 카페</h1>
-        <p className="mt-1 text-sm text-gray-500">봉원교회 카페 · 주문하기</p>
+      <header className="mb-8 rounded-2xl border border-amber-100 bg-white px-6 py-6 text-center shadow-sm">
+        <h1 className="text-3xl font-bold text-amber-800">☕ 샘뜰 카페</h1>
+        <p className="mt-1 text-sm text-amber-700/70">봉원교회 카페 · 주문하기</p>
       </header>
 
       {/* 메뉴 목록 */}
@@ -118,7 +118,7 @@ export default function CustomerPage() {
         if (items.length === 0) return null;
         return (
           <section key={category} className="mb-8">
-            <h2 className="mb-3 border-b border-amber-200 pb-2 text-lg font-bold text-amber-900">
+            <h2 className="mb-3 border-b border-amber-200 pb-2 text-lg font-bold text-amber-800">
               {category}
             </h2>
             <ul className="space-y-2">
@@ -127,7 +127,7 @@ export default function CustomerPage() {
                   <button
                     disabled={item.soldOut}
                     onClick={() => setSelected(item)}
-                    className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-amber-400 disabled:opacity-40"
+                    className="flex w-full items-center justify-between rounded-xl border border-amber-100 bg-white px-4 py-3 text-left shadow-sm transition hover:border-amber-300 hover:shadow disabled:opacity-40"
                   >
                     <div>
                       <div className="font-semibold">
@@ -140,7 +140,7 @@ export default function CustomerPage() {
                         <div className="text-xs text-gray-500">{item.description}</div>
                       )}
                     </div>
-                    <div className="font-semibold text-amber-800">
+                    <div className="font-semibold text-amber-700">
                       {formatPrice(item.price)}
                     </div>
                   </button>
@@ -161,7 +161,7 @@ export default function CustomerPage() {
       )}
 
       {/* 하단 고정: 장바구니 + 주문자 정보 */}
-      <div className="fixed inset-x-0 bottom-0 border-t border-gray-200 bg-white/95 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 border-t border-amber-100 bg-white/95 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] backdrop-blur">
         <div className="mx-auto max-w-2xl px-4 py-3">
           {cart.length > 0 && (
             <ul className="mb-3 max-h-36 space-y-1 overflow-y-auto text-sm">
@@ -221,7 +221,7 @@ export default function CustomerPage() {
           <button
             onClick={submitOrder}
             disabled={submitting || cart.length === 0}
-            className="w-full rounded-xl bg-amber-700 py-3 font-bold text-white transition hover:bg-amber-800 disabled:opacity-50"
+            className="w-full rounded-xl bg-amber-600 py-3 font-bold text-white transition hover:bg-amber-700 disabled:opacity-50"
           >
             {submitting
               ? "주문 접수 중..."
@@ -264,7 +264,7 @@ function OptionModal({
       >
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-bold">{item.name}</h3>
-          <span className="font-semibold text-amber-800">{formatPrice(unitPrice)}</span>
+          <span className="font-semibold text-amber-700">{formatPrice(unitPrice)}</span>
         </div>
 
         {item.hasTemperature && (
@@ -324,7 +324,7 @@ function OptionModal({
                 unitPrice,
               })
             }
-            className="flex-1 rounded-xl bg-amber-700 py-3 font-bold text-white hover:bg-amber-800"
+            className="flex-1 rounded-xl bg-amber-600 py-3 font-bold text-white hover:bg-amber-700"
           >
             {formatPrice(unitPrice * quantity)} 담기
           </button>
@@ -357,7 +357,7 @@ function OptionRow<T extends string>({
             onClick={() => onChange(o)}
             className={`flex-1 rounded-lg border py-2 text-sm font-semibold transition ${
               value === o
-                ? "border-amber-700 bg-amber-50 text-amber-800"
+                ? "border-amber-500 bg-amber-100 text-amber-800"
                 : "border-gray-300 text-gray-500"
             }`}
           >
