@@ -9,9 +9,10 @@ export interface OrderItem {
   menuId: string;
   name: string;
   temperature: "HOT" | "ICE" | null;
-  size: "Regular" | "Large" | null;
+  /** 과거 주문 호환용. 현재는 Regular 단일 사이즈라 새 주문에는 저장하지 않습니다. */
+  size?: "Regular" | "Large" | null;
   quantity: number;
-  /** 옵션 포함 1개 가격 (원) */
+  /** 1개 가격 (원) */
   unitPrice: number;
 }
 
@@ -20,14 +21,15 @@ export interface Order {
   id: string;
   created_at: string;
   customer_name: string;
-  phone: string;
+  /** 과거 주문 호환용. 현재는 수집하지 않습니다. */
+  phone: string | null;
   items: OrderItem[];
   total: number;
   status: OrderStatus;
   memo: string | null;
 }
 
-/** 주문 항목 한 줄 표시용 텍스트 (예: "아메리카노 (ICE/Large) x2") */
+/** 주문 항목 한 줄 표시용 텍스트 (예: "아메리카노 (ICE) x2") */
 export function formatOrderItem(item: OrderItem): string {
   const opts = [item.temperature, item.size === "Large" ? "Large" : null]
     .filter(Boolean)
