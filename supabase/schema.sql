@@ -31,6 +31,11 @@ drop policy if exists "anon update orders" on public.orders;
 create policy "anon update orders" on public.orders
   for update to anon using (true) with check (true);
 
+-- 관리자 페이지에서 오류 주문 삭제용
+drop policy if exists "anon delete orders" on public.orders;
+create policy "anon delete orders" on public.orders
+  for delete to anon using (true);
+
 -- 관리자 페이지 실시간 갱신을 위해 Realtime 발행에 테이블 추가
 alter publication supabase_realtime add table public.orders;
 

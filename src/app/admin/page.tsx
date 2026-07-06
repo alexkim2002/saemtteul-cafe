@@ -258,6 +258,27 @@ function OrdersTab({ menu }: { menu: MenuItem[] }) {
     }
   }
 
+  /** 오류 주문 삭제 — 매출 집계에서도 제외됩니다 */
+  async function deleteOrder(order: Order) {
+    if (!supabase) return;
+    setOrders((prev) => prev.filter((o) => o.id !== order.id));
+    // .select()로 실제 삭제된 행을 돌려받아, RLS 정책이 없어 조용히
+    // 실패하는 경우(0건 삭제)도 오류로 알려줍니다.
+    const { data, error: dbError } = await supabase
+      .from("orders")
+      .delete()
+      .eq("id", order.id)
+      .select("id");
+    if (dbError || !data || data.length === 0) {
+      setError(
+        dbError
+          ? `주문 삭제 실패: ${dbError.message}`
+          : "주문 삭제 실패: 삭제 권한 정책이 없습니다. supabase/schema.sql을 SQL Editor에서 실행해 주세요."
+      );
+      fetchOrders();
+    }
+  }
+
   const filtered =
     filter === "전체" ? orders : orders.filter((o) => o.status === filter);
   const pendingCount = orders.filter((o) => o.status === "대기").length;
@@ -307,7 +328,12 @@ function OrdersTab({ menu }: { menu: MenuItem[] }) {
       ) : (
         <ul className="space-y-3">
           {filtered.map((order) => (
-            <OrderCard key={order.id} order={order} onUpdateStatus={updateStatus} />
+            <OrderCard
+              key={order.id}
+              order={order}
+              onUpdateStatus={updateStatus}
+              onDelete={deleteOrder}
+            />
           ))}
         </ul>
       )}
@@ -332,10 +358,14 @@ function OrdersTab({ menu }: { menu: MenuItem[] }) {
 function OrderCard({
   order,
   onUpdateStatus,
+  onDelete,
 }: {
   order: Order;
   onUpdateStatus: (order: Order, status: OrderStatus) => void;
+  onDelete: (order: Order) => void;
 }) {
+  // 삭제는 실수 방지를 위해 두 번 눌러 확정 (다른 곳을 누르면 취소)
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const next = NEXT_STATUS[order.status];
   const time = new Date(order.created_at).toLocaleTimeString("ko-KR", {
     hour: "2-digit",
@@ -369,25 +399,53 @@ function OrderCard({
       <div className="flex items-center justify-between">
         <span className="font-bold text-amber-700">{formatPrice(order.total)}</span>
         <div className="flex gap-2">
-          {/* 상태 직접 선택 */}
-          <select
-            value={order.status}
-            onChange={(e) => onUpdateStatus(order, e.target.value as OrderStatus)}
-            className="rounded-lg border border-amber-200 px-2 py-1.5 text-sm"
-          >
-            {ORDER_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          {next && (
-            <button
-              onClick={() => onUpdateStatus(order, next)}
-              className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-bold text-white hover:bg-amber-700"
-            >
-              {next} 처리 ✓
-            </button>
+          {confirmingDelete ? (
+            <>
+              <span className="self-center text-xs text-red-600">
+                매출에서도 제외됩니다
+              </span>
+              <button
+                onClick={() => onDelete(order)}
+                className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-bold text-white hover:bg-red-700"
+              >
+                정말 삭제
+              </button>
+              <button
+                onClick={() => setConfirmingDelete(false)}
+                className="rounded-lg border border-amber-200 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:bg-amber-50"
+              >
+                취소
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setConfirmingDelete(true)}
+                className="rounded-lg border border-red-200 px-2.5 py-1.5 text-sm font-semibold text-red-500 hover:bg-red-50"
+              >
+                삭제
+              </button>
+              {/* 상태 직접 선택 */}
+              <select
+                value={order.status}
+                onChange={(e) => onUpdateStatus(order, e.target.value as OrderStatus)}
+                className="rounded-lg border border-amber-200 px-2 py-1.5 text-sm"
+              >
+                {ORDER_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              {next && (
+                <button
+                  onClick={() => onUpdateStatus(order, next)}
+                  className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-bold text-white hover:bg-amber-700"
+                >
+                  {next} 처리 ✓
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
