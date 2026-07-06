@@ -208,7 +208,7 @@ export default function CustomerPage() {
 
       {/* 하단 고정: 장바구니 + 주문자 정보 */}
       <div className="fixed inset-x-0 bottom-0 rounded-t-3xl bg-white shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
-        <div className="mx-auto max-w-2xl px-5 pb-5 pt-4">
+        <div className="mx-auto max-w-2xl px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
           {cart.length > 0 && (
             <ul className="mb-3 max-h-36 space-y-2 overflow-y-auto text-sm">
               {cart.map((line) => {
@@ -395,7 +395,7 @@ function OptionModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-xl sm:rounded-3xl"
+        className="w-full max-w-md rounded-t-3xl bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-xl sm:rounded-3xl sm:pb-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">

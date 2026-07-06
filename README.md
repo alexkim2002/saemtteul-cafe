@@ -69,7 +69,7 @@ src/
     admin/page.tsx      # 관리자 페이지 (/admin) — 주문/매출/메뉴 탭
     api/admin/          # 관리자 로그인/세션 API (서버 측 인증)
     layout.tsx          # 공통 레이아웃/메타데이터
-    globals.css         # 전역 스타일 (밝은 테마 고정, 교회 사진 배경)
+    globals.css         # 전역 스타일 (밝은 테마 고정, 모바일 터치 보정)
   data/
     menu.ts             # 메뉴 타입 + 예비(폴백) 메뉴
   lib/
@@ -77,8 +77,6 @@ src/
     menu.ts             # 메뉴 불러오기 (DB 우선, 실패 시 폴백)
     types.ts            # 주문 타입/포맷 함수
     adminAuth.ts        # 관리자 세션 토큰 (서버 전용)
-public/
-  bongwon-church.jpg    # 배경 사진
 supabase/
   schema.sql            # DB 테이블/정책/시드 SQL (Supabase SQL Editor에서 실행)
 ```

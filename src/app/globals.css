@@ -5,17 +5,10 @@
   color-scheme: light;
 }
 
-/* 봉원교회 사진을 은은하게 깔아주는 고정 배경 레이어 */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background-image: url("/bongwon-church.jpg");
-  background-size: cover;
-  background-position: center;
-  opacity: 0.05;
-  pointer-events: none;
+html {
+  /* 모바일에서 탭할 때 회색 하이라이트 제거 + 당겨서 튕기는 스크롤 억제 */
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
 }
 
 body {
