@@ -1,8 +1,8 @@
 // 주문 관련 공용 타입
 
-export type OrderStatus = "대기" | "준비중" | "완료";
+export type OrderStatus = "대기" | "완료";
 
-export const ORDER_STATUSES: OrderStatus[] = ["대기", "준비중", "완료"];
+export const ORDER_STATUSES: OrderStatus[] = ["대기", "완료"];
 
 /** 주문에 담긴 개별 항목 (Supabase orders.items jsonb에 저장되는 형태) */
 export interface OrderItem {

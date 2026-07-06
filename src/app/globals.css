@@ -5,6 +5,19 @@
   color-scheme: light;
 }
 
+/* 봉원교회 사진을 은은하게 깔아주는 고정 배경 레이어 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: url("/bongwon-church.jpg");
+  background-size: cover;
+  background-position: center;
+  opacity: 0.09;
+  pointer-events: none;
+}
+
 body {
   font-family:
     "Pretendard Variable",

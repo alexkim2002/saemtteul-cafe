@@ -97,6 +97,7 @@ export default function CustomerPage() {
             <span className="font-semibold">{doneOrderName}</span>님, 준비가 완료되면
             불러드릴게요.
           </p>
+          <p className="mt-4 text-sm text-amber-700/70">✝️ 봉원교회 샘뜰 카페</p>
           <button
             onClick={() => setDoneOrderName(null)}
             className="mt-8 rounded-lg bg-amber-600 px-6 py-3 font-semibold text-white shadow-sm hover:bg-amber-700"
@@ -113,7 +114,14 @@ export default function CustomerPage() {
       {/* 헤더 */}
       <header className="mb-8 rounded-2xl border border-amber-100 bg-gradient-to-b from-white to-amber-50 px-6 py-7 text-center shadow-sm">
         <h1 className="text-3xl font-bold text-amber-800">☕ 샘뜰 카페</h1>
-        <p className="mt-1.5 text-sm text-amber-700/70">봉원교회 카페 · 주문하기</p>
+        <p className="mt-1.5 text-sm text-amber-700/70">
+          ✝️ 봉원교회 카페 · 주문하기
+        </p>
+        <div className="mx-auto mt-3 flex max-w-[10rem] items-center gap-2 text-amber-300">
+          <span className="h-px flex-1 bg-amber-200" aria-hidden />
+          <span className="text-xs" aria-hidden>✝️</span>
+          <span className="h-px flex-1 bg-amber-200" aria-hidden />
+        </div>
       </header>
 
       {/* 메뉴 목록 */}

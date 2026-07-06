@@ -13,18 +13,13 @@ import {
   formatPrice,
 } from "@/lib/types";
 
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "samteul1234";
-const AUTH_KEY = "samteul-admin-auth";
-
 const STATUS_STYLE: Record<OrderStatus, string> = {
   대기: "bg-red-100 text-red-700 border-red-300",
-  준비중: "bg-yellow-100 text-yellow-800 border-yellow-300",
   완료: "bg-green-100 text-green-700 border-green-300",
 };
 
 const NEXT_STATUS: Record<OrderStatus, OrderStatus | null> = {
-  대기: "준비중",
-  준비중: "완료",
+  대기: "완료",
   완료: null,
 };
 
@@ -40,25 +35,27 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [ready, setReady] = useState(false);
 
+  // 서버가 httpOnly 쿠키로 세션을 확인합니다 (비밀번호는 브라우저에 노출되지 않음)
   useEffect(() => {
-    setAuthed(sessionStorage.getItem(AUTH_KEY) === "true");
-    setReady(true);
+    fetch("/api/admin/session")
+      .then((res) => res.json())
+      .then((data) => setAuthed(data.authed === true))
+      .catch(() => setAuthed(false))
+      .finally(() => setReady(true));
   }, []);
+
+  async function logout() {
+    await fetch("/api/admin/login", { method: "DELETE" });
+    setAuthed(false);
+  }
 
   if (!ready) return null;
 
   if (!authed) {
-    return (
-      <LoginForm
-        onSuccess={() => {
-          sessionStorage.setItem(AUTH_KEY, "true");
-          setAuthed(true);
-        }}
-      />
-    );
+    return <LoginForm onSuccess={() => setAuthed(true)} />;
   }
 
-  return <AdminShell />;
+  return <AdminShell onLogout={logout} />;
 }
 
 // ------------------------------------------------------------
@@ -66,14 +63,29 @@ export default function AdminPage() {
 // ------------------------------------------------------------
 function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      onSuccess();
-    } else {
-      setError(true);
+    setError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      if (res.ok) {
+        onSuccess();
+      } else {
+        const data = await res.json().catch(() => null);
+        setError(data?.error ?? "로그인에 실패했습니다.");
+      }
+    } catch {
+      setError("서버에 연결하지 못했습니다.");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -81,7 +93,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
       <div className="rounded-2xl border border-amber-100 bg-white p-6 shadow-sm">
         <h1 className="mb-6 text-center text-2xl font-bold text-amber-800">
-          🔒 샘뜰 카페 관리자
+          ✝️ 샘뜰 카페 관리자
         </h1>
         <form onSubmit={submit} className="space-y-3">
           <input
@@ -89,20 +101,19 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);
-              setError(false);
+              setError(null);
             }}
             placeholder="비밀번호"
             autoFocus
             className="w-full rounded-lg border border-amber-200 px-4 py-3 focus:border-amber-500 focus:outline-none"
           />
-          {error && (
-            <p className="text-sm text-red-600">비밀번호가 올바르지 않습니다.</p>
-          )}
+          {error && <p className="text-sm text-red-600">{error}</p>}
           <button
             type="submit"
-            className="w-full rounded-lg bg-amber-600 py-3 font-bold text-white shadow-sm hover:bg-amber-700"
+            disabled={submitting}
+            className="w-full rounded-lg bg-amber-600 py-3 font-bold text-white shadow-sm hover:bg-amber-700 disabled:opacity-50"
           >
-            입장
+            {submitting ? "확인 중..." : "입장"}
           </button>
         </form>
       </div>
@@ -113,7 +124,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 // ------------------------------------------------------------
 // 관리자 셸: 탭 전환 + 공용 메뉴 상태
 // ------------------------------------------------------------
-function AdminShell() {
+function AdminShell({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<AdminTab>("orders");
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [menuFromDb, setMenuFromDb] = useState(false);
@@ -145,7 +156,15 @@ function AdminShell() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 pb-24">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold text-amber-800">샘뜰 카페 관리자</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-amber-800">✝️ 샘뜰 카페 관리자</h1>
+          <button
+            onClick={onLogout}
+            className="rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-amber-50"
+          >
+            로그아웃
+          </button>
+        </div>
         <nav className="mt-4 flex gap-2">
           {TABS.map(({ key, label }) => (
             <button
@@ -367,7 +386,7 @@ function OrderCard({
               onClick={() => onUpdateStatus(order, next)}
               className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-bold text-white hover:bg-amber-700"
             >
-              {next}(으)로 →
+              {next} 처리 ✓
             </button>
           )}
         </div>
@@ -705,7 +724,7 @@ function SalesTab() {
           )}
 
           <p className="mt-3 text-xs text-gray-400">
-            * 모든 상태(대기/준비중/완료)의 주문을 포함하며, 최근 1,000건까지
+            * 모든 상태(대기/완료)의 주문을 포함하며, 최근 1,000건까지
             집계합니다.
           </p>
         </>

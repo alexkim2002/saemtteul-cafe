@@ -11,7 +11,7 @@ create table if not exists public.orders (
   items jsonb not null,          -- [{ menuId, name, temperature, size, quantity, unitPrice }]
   total integer not null,        -- 총 금액 (원)
   status text not null default '대기'
-    check (status in ('대기', '준비중', '완료')),
+    check (status in ('대기', '완료')),
   memo text
 );
 
