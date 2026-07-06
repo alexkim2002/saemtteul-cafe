@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 로컬 원본 사진 (배포용은 public/bongwon-church.jpg)
+봉원교회 사진.jpg

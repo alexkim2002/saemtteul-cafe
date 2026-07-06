@@ -138,6 +138,8 @@ function AdminShell({ onLogout }: { onLogout: () => void }) {
   }, [supabase]);
 
   useEffect(() => {
+    // setState는 fetch 완료 후 비동기 콜백에서 실행됨 (동기 렌더 연쇄 없음)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshMenu();
   }, [refreshMenu]);
 
@@ -222,6 +224,8 @@ function OrdersTab({ menu }: { menu: MenuItem[] }) {
   // 최초 로드 + Realtime 구독 (새 주문/상태 변경 시 자동 갱신)
   useEffect(() => {
     if (!supabase) return;
+    // setState는 fetch 완료 후 비동기 콜백에서 실행됨 (동기 렌더 연쇄 없음)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchOrders();
 
     const channel = supabase
@@ -364,7 +368,7 @@ function OrderCard({
   onUpdateStatus: (order: Order, status: OrderStatus) => void;
   onDelete: (order: Order) => void;
 }) {
-  // 삭제는 실수 방지를 위해 두 번 눌러 확정 (다른 곳을 누르면 취소)
+  // 삭제는 실수 방지를 위해 "삭제 → 정말 삭제" 두 번 눌러야 확정
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const next = NEXT_STATUS[order.status];
   const time = new Date(order.created_at).toLocaleTimeString("ko-KR", {
@@ -476,7 +480,8 @@ function ManualOrderModal({
   const [temperature, setTemperature] = useState<"HOT" | "ICE">("HOT");
   const [quantity, setQuantity] = useState(1);
 
-  const selectedMenu = menu.find((m) => m.id === menuId);
+  // 모달이 메뉴 로딩 완료 전에 열렸으면 menuId가 비어 있으므로 첫 메뉴로 보정
+  const selectedMenu = menu.find((m) => m.id === menuId) ?? menu[0];
   const total = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
 
   function addItem() {
@@ -540,7 +545,7 @@ function ManualOrderModal({
         {/* 항목 추가 */}
         <div className="mb-3 rounded-xl border border-amber-100 bg-amber-50/60 p-3">
           <select
-            value={menuId}
+            value={selectedMenu?.id ?? ""}
             onChange={(e) => setMenuId(e.target.value)}
             className="mb-2 w-full rounded-lg border border-amber-200 px-2 py-2 text-sm"
           >
@@ -657,14 +662,19 @@ function rangeStart(range: SalesRange): Date | null {
 
 function SalesTab() {
   const [range, setRange] = useState<SalesRange>("오늘");
-  const [orders, setOrders] = useState<Order[] | null>(null);
+  // 어떤 기간의 응답인지 함께 저장해서, 기간을 빠르게 바꿀 때
+  // 늦게 도착한 이전 기간 응답이 화면을 덮어쓰지 않게 합니다.
+  const [result, setResult] = useState<{
+    range: SalesRange;
+    orders: Order[];
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const supabase = useMemo(() => getSupabase(), []);
 
   useEffect(() => {
     if (!supabase) return;
-    setOrders(null);
+    let cancelled = false;
     let query = supabase
       .from("orders")
       .select("id, created_at, total, status, items")
@@ -674,15 +684,22 @@ function SalesTab() {
     if (start) query = query.gte("created_at", start.toISOString());
 
     query.then(({ data, error: dbError }) => {
+      if (cancelled) return;
       if (dbError) {
         setError(`매출을 불러오지 못했습니다: ${dbError.message}`);
-        setOrders([]);
+        setResult({ range, orders: [] });
       } else {
         setError(null);
-        setOrders((data ?? []) as Order[]);
+        setResult({ range, orders: (data ?? []) as Order[] });
       }
     });
+    return () => {
+      cancelled = true;
+    };
   }, [supabase, range]);
+
+  // 현재 선택된 기간의 응답이 아직 없으면 로딩 상태
+  const orders = result && result.range === range ? result.orders : null;
 
   const stats = useMemo(() => {
     if (!orders) return null;

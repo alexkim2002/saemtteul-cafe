@@ -8,7 +8,7 @@ create table if not exists public.orders (
   created_at timestamptz not null default now(),
   customer_name text not null,
   phone text not null default '',
-  items jsonb not null,          -- [{ menuId, name, temperature, size, quantity, unitPrice }]
+  items jsonb not null,          -- [{ menuId, name, temperature, quantity, unitPrice }]
   total integer not null,        -- 총 금액 (원)
   status text not null default '대기'
     check (status in ('대기', '완료')),

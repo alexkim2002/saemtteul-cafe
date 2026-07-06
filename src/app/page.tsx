@@ -127,6 +127,10 @@ export default function CustomerPage() {
       {/* 메뉴 목록 */}
       {menu === null ? (
         <p className="py-16 text-center text-gray-400">메뉴를 불러오는 중...</p>
+      ) : menu.length === 0 ? (
+        <p className="py-16 text-center text-gray-400">
+          등록된 메뉴가 없습니다. 관리자 페이지에서 메뉴를 추가해 주세요.
+        </p>
       ) : (
         orderedCategories(menu).map((category) => {
           const items = menu.filter((m) => m.category === category);
