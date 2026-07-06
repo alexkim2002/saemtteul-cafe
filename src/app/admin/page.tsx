@@ -70,31 +70,33 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
-      <h1 className="mb-6 text-center text-2xl font-bold text-amber-800">
-        🔒 샘뜰 카페 관리자
-      </h1>
-      <form onSubmit={submit} className="space-y-3">
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
-            setError(false);
-          }}
-          placeholder="비밀번호"
-          autoFocus
-          className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-amber-500 focus:outline-none"
-        />
-        {error && (
-          <p className="text-sm text-red-600">비밀번호가 올바르지 않습니다.</p>
-        )}
-        <button
-          type="submit"
-          className="w-full rounded-lg bg-amber-600 py-3 font-bold text-white hover:bg-amber-700"
-        >
-          입장
-        </button>
-      </form>
+      <div className="rounded-2xl border border-amber-100 bg-white p-6 shadow-sm">
+        <h1 className="mb-6 text-center text-2xl font-bold text-amber-800">
+          🔒 샘뜰 카페 관리자
+        </h1>
+        <form onSubmit={submit} className="space-y-3">
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setError(false);
+            }}
+            placeholder="비밀번호"
+            autoFocus
+            className="w-full rounded-lg border border-amber-200 px-4 py-3 focus:border-amber-500 focus:outline-none"
+          />
+          {error && (
+            <p className="text-sm text-red-600">비밀번호가 올바르지 않습니다.</p>
+          )}
+          <button
+            type="submit"
+            className="w-full rounded-lg bg-amber-600 py-3 font-bold text-white shadow-sm hover:bg-amber-700"
+          >
+            입장
+          </button>
+        </form>
+      </div>
     </main>
   );
 }
@@ -212,7 +214,7 @@ function Dashboard() {
             className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition ${
               filter === s
                 ? "border-amber-600 bg-amber-600 text-white"
-                : "border-gray-300 bg-white text-gray-600"
+                : "border-amber-200 bg-white text-gray-600 hover:bg-amber-50"
             }`}
           >
             {s}
@@ -301,7 +303,7 @@ function OrderCard({
           <select
             value={order.status}
             onChange={(e) => onUpdateStatus(order, e.target.value as OrderStatus)}
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+            className="rounded-lg border border-amber-200 px-2 py-1.5 text-sm"
           >
             {ORDER_STATUSES.map((s) => (
               <option key={s} value={s}>
@@ -398,7 +400,7 @@ function ManualOrderModal({
       onClick={onClose}
     >
       <div
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="mb-4 text-lg font-bold">수동 주문 추가</h3>
@@ -408,22 +410,22 @@ function ManualOrderModal({
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
             placeholder="주문자 이름 *"
-            className="w-1/2 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="w-1/2 rounded-lg border border-amber-200 px-3 py-2 text-sm"
           />
           <input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="연락처 (선택)"
-            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="flex-1 rounded-lg border border-amber-200 px-3 py-2 text-sm"
           />
         </div>
 
         {/* 항목 추가 */}
-        <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+        <div className="mb-3 rounded-xl border border-amber-100 bg-amber-50/60 p-3">
           <select
             value={menuId}
             onChange={(e) => setMenuId(e.target.value)}
-            className="mb-2 w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"
+            className="mb-2 w-full rounded-lg border border-amber-200 px-2 py-2 text-sm"
           >
             {MENU.map((m) => (
               <option key={m.id} value={m.id}>
@@ -437,7 +439,7 @@ function ManualOrderModal({
               <select
                 value={temperature}
                 onChange={(e) => setTemperature(e.target.value as "HOT" | "ICE")}
-                className="flex-1 rounded-lg border border-gray-300 px-2 py-2 text-sm"
+                className="flex-1 rounded-lg border border-amber-200 px-2 py-2 text-sm"
               >
                 <option value="HOT">HOT</option>
                 <option value="ICE">ICE</option>
@@ -447,7 +449,7 @@ function ManualOrderModal({
               <select
                 value={size}
                 onChange={(e) => setSize(e.target.value as "Regular" | "Large")}
-                className="flex-1 rounded-lg border border-gray-300 px-2 py-2 text-sm"
+                className="flex-1 rounded-lg border border-amber-200 px-2 py-2 text-sm"
               >
                 <option value="Regular">Regular</option>
                 <option value="Large">Large (+{SIZE_UPCHARGE}원)</option>
@@ -458,7 +460,7 @@ function ManualOrderModal({
               min={1}
               value={quantity}
               onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-              className="w-16 rounded-lg border border-gray-300 px-2 py-2 text-center text-sm"
+              className="w-16 rounded-lg border border-amber-200 px-2 py-2 text-center text-sm"
             />
           </div>
 
@@ -498,7 +500,7 @@ function ManualOrderModal({
           value={memo}
           onChange={(e) => setMemo(e.target.value)}
           placeholder="메모 (선택)"
-          className="mb-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          className="mb-3 w-full rounded-lg border border-amber-200 px-3 py-2 text-sm"
         />
 
         {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
@@ -506,7 +508,7 @@ function ManualOrderModal({
         <div className="flex gap-2">
           <button
             onClick={onClose}
-            className="w-1/3 rounded-xl border border-gray-300 py-3 font-semibold text-gray-600"
+            className="w-1/3 rounded-xl border border-amber-200 py-3 font-semibold text-gray-600 hover:bg-amber-50"
           >
             취소
           </button>

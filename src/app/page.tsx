@@ -87,19 +87,21 @@ export default function CustomerPage() {
   // 주문 완료 화면
   if (doneOrderName) {
     return (
-      <main className="mx-auto max-w-lg px-4 py-20 text-center">
-        <div className="text-5xl">✅</div>
-        <h1 className="mt-4 text-2xl font-bold">주문이 접수되었습니다!</h1>
-        <p className="mt-2 text-gray-600">
-          <span className="font-semibold">{doneOrderName}</span>님, 준비가 완료되면
-          불러드릴게요.
-        </p>
-        <button
-          onClick={() => setDoneOrderName(null)}
-          className="mt-8 rounded-lg bg-amber-600 px-6 py-3 font-semibold text-white hover:bg-amber-700"
-        >
-          새 주문 하기
-        </button>
+      <main className="mx-auto max-w-lg px-4 py-20">
+        <div className="rounded-2xl border border-amber-100 bg-white px-6 py-12 text-center shadow-sm">
+          <div className="text-5xl">✅</div>
+          <h1 className="mt-4 text-2xl font-bold">주문이 접수되었습니다!</h1>
+          <p className="mt-2 text-gray-600">
+            <span className="font-semibold">{doneOrderName}</span>님, 준비가 완료되면
+            불러드릴게요.
+          </p>
+          <button
+            onClick={() => setDoneOrderName(null)}
+            className="mt-8 rounded-lg bg-amber-600 px-6 py-3 font-semibold text-white shadow-sm hover:bg-amber-700"
+          >
+            새 주문 하기
+          </button>
+        </div>
       </main>
     );
   }
@@ -107,9 +109,9 @@ export default function CustomerPage() {
   return (
     <main className="mx-auto max-w-2xl px-4 pb-48 pt-8">
       {/* 헤더 */}
-      <header className="mb-8 rounded-2xl border border-amber-100 bg-white px-6 py-6 text-center shadow-sm">
+      <header className="mb-8 rounded-2xl border border-amber-100 bg-gradient-to-b from-white to-amber-50 px-6 py-7 text-center shadow-sm">
         <h1 className="text-3xl font-bold text-amber-800">☕ 샘뜰 카페</h1>
-        <p className="mt-1 text-sm text-amber-700/70">봉원교회 카페 · 주문하기</p>
+        <p className="mt-1.5 text-sm text-amber-700/70">봉원교회 카페 · 주문하기</p>
       </header>
 
       {/* 메뉴 목록 */}
@@ -118,7 +120,8 @@ export default function CustomerPage() {
         if (items.length === 0) return null;
         return (
           <section key={category} className="mb-8">
-            <h2 className="mb-3 border-b border-amber-200 pb-2 text-lg font-bold text-amber-800">
+            <h2 className="mb-3 flex items-center gap-2 text-lg font-bold text-amber-800">
+              <span className="h-5 w-1.5 rounded-full bg-amber-400" aria-hidden />
               {category}
             </h2>
             <ul className="space-y-2">
@@ -127,13 +130,15 @@ export default function CustomerPage() {
                   <button
                     disabled={item.soldOut}
                     onClick={() => setSelected(item)}
-                    className="flex w-full items-center justify-between rounded-xl border border-amber-100 bg-white px-4 py-3 text-left shadow-sm transition hover:border-amber-300 hover:shadow disabled:opacity-40"
+                    className="flex w-full items-center justify-between gap-3 rounded-xl border border-amber-100 bg-white px-4 py-3.5 text-left shadow-sm transition hover:border-amber-300 hover:shadow active:bg-amber-50 disabled:opacity-40"
                   >
                     <div>
                       <div className="font-semibold">
                         {item.name}
                         {item.soldOut && (
-                          <span className="ml-2 text-xs text-red-500">품절</span>
+                          <span className="ml-2 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-500">
+                            품절
+                          </span>
                         )}
                       </div>
                       {item.description && (
@@ -179,14 +184,14 @@ export default function CustomerPage() {
                     <span className="flex shrink-0 items-center gap-2">
                       <button
                         onClick={() => changeQuantity(key, -1)}
-                        className="h-6 w-6 rounded border border-gray-300 leading-none"
+                        className="h-6 w-6 rounded-md border border-amber-200 bg-amber-50 font-semibold text-amber-700 leading-none hover:bg-amber-100"
                       >
                         −
                       </button>
                       <span className="w-5 text-center">{line.quantity}</span>
                       <button
                         onClick={() => changeQuantity(key, 1)}
-                        className="h-6 w-6 rounded border border-gray-300 leading-none"
+                        className="h-6 w-6 rounded-md border border-amber-200 bg-amber-50 font-semibold text-amber-700 leading-none hover:bg-amber-100"
                       >
                         +
                       </button>
@@ -205,14 +210,14 @@ export default function CustomerPage() {
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               placeholder="주문자 이름"
-              className="w-2/5 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+              className="w-2/5 rounded-lg border border-amber-200 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
             />
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="연락처 (예: 010-1234-5678)"
               inputMode="tel"
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+              className="flex-1 rounded-lg border border-amber-200 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
             />
           </div>
 
@@ -221,7 +226,7 @@ export default function CustomerPage() {
           <button
             onClick={submitOrder}
             disabled={submitting || cart.length === 0}
-            className="w-full rounded-xl bg-amber-600 py-3 font-bold text-white transition hover:bg-amber-700 disabled:opacity-50"
+            className="w-full rounded-xl bg-amber-600 py-3 font-bold text-white shadow-sm transition hover:bg-amber-700 disabled:opacity-50"
           >
             {submitting
               ? "주문 접수 중..."
@@ -259,7 +264,7 @@ function OptionModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-t-2xl bg-white p-5 sm:rounded-2xl"
+        className="w-full max-w-md rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
@@ -292,14 +297,14 @@ function OptionModal({
           <div className="flex items-center gap-3">
             <button
               onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="h-8 w-8 rounded-lg border border-gray-300 text-lg leading-none"
+              className="h-8 w-8 rounded-lg border border-amber-200 bg-amber-50 text-lg font-semibold text-amber-700 leading-none hover:bg-amber-100"
             >
               −
             </button>
             <span className="w-6 text-center font-semibold">{quantity}</span>
             <button
               onClick={() => setQuantity((q) => q + 1)}
-              className="h-8 w-8 rounded-lg border border-gray-300 text-lg leading-none"
+              className="h-8 w-8 rounded-lg border border-amber-200 bg-amber-50 text-lg font-semibold text-amber-700 leading-none hover:bg-amber-100"
             >
               +
             </button>
@@ -309,7 +314,7 @@ function OptionModal({
         <div className="flex gap-2">
           <button
             onClick={onClose}
-            className="w-1/3 rounded-xl border border-gray-300 py-3 font-semibold text-gray-600"
+            className="w-1/3 rounded-xl border border-amber-200 py-3 font-semibold text-gray-600 hover:bg-amber-50"
           >
             취소
           </button>
@@ -358,7 +363,7 @@ function OptionRow<T extends string>({
             className={`flex-1 rounded-lg border py-2 text-sm font-semibold transition ${
               value === o
                 ? "border-amber-500 bg-amber-100 text-amber-800"
-                : "border-gray-300 text-gray-500"
+                : "border-amber-200 text-gray-500"
             }`}
           >
             {o}
