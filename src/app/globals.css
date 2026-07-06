@@ -14,7 +14,7 @@ body::before {
   background-image: url("/bongwon-church.jpg");
   background-size: cover;
   background-position: center;
-  opacity: 0.09;
+  opacity: 0.05;
   pointer-events: none;
 }
 

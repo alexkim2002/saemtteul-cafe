@@ -9,6 +9,14 @@ import { OrderItem, formatPrice } from "@/lib/types";
 // 장바구니 항목 (동일 메뉴+옵션이면 수량만 증가)
 type CartLine = OrderItem;
 
+// 텀블러(개인컵) 지참 시 주문당 할인 금액 (원)
+const TUMBLER_DISCOUNT = 500;
+
+// 계좌이체 안내 (결제 모듈 없이 이체로 받습니다)
+const BANK_NAME = "신협";
+const BANK_ACCOUNT = "131-006-066742";
+const ACCOUNT_HOLDER = "봉원교회";
+
 function cartLineKey(line: CartLine): string {
   return `${line.menuId}|${line.temperature}`;
 }
@@ -18,18 +26,24 @@ export default function CustomerPage() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [selected, setSelected] = useState<MenuItem | null>(null);
   const [customerName, setCustomerName] = useState("");
+  const [bringTumbler, setBringTumbler] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [doneOrderName, setDoneOrderName] = useState<string | null>(null);
+  const [doneOrder, setDoneOrder] = useState<{ name: string; total: number } | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMenu(getSupabase()).then((result) => setMenu(result.items));
   }, []);
 
-  const total = useMemo(
+  const subtotal = useMemo(
     () => cart.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0),
     [cart]
   );
+  const discount =
+    bringTumbler && cart.length > 0 ? Math.min(TUMBLER_DISCOUNT, subtotal) : 0;
+  const total = subtotal - discount;
 
   function addToCart(line: CartLine) {
     setCart((prev) => {
@@ -73,6 +87,9 @@ export default function CustomerPage() {
       items: cart,
       total,
       status: "대기",
+      memo: bringTumbler
+        ? `텀블러 지참 (-${TUMBLER_DISCOUNT.toLocaleString("ko-KR")}원 할인)`
+        : null,
     });
     setSubmitting(false);
 
@@ -81,26 +98,34 @@ export default function CustomerPage() {
       return;
     }
 
-    setDoneOrderName(customerName.trim());
+    setDoneOrder({ name: customerName.trim(), total });
     setCart([]);
     setCustomerName("");
+    setBringTumbler(false);
   }
 
   // 주문 완료 화면
-  if (doneOrderName) {
+  if (doneOrder) {
     return (
-      <main className="mx-auto max-w-lg px-4 py-20">
-        <div className="rounded-2xl border border-amber-100 bg-white px-6 py-12 text-center shadow-sm">
-          <div className="text-5xl">✅</div>
-          <h1 className="mt-4 text-2xl font-bold">주문이 접수되었습니다!</h1>
-          <p className="mt-2 text-gray-600">
-            <span className="font-semibold">{doneOrderName}</span>님, 준비가 완료되면
-            불러드릴게요.
+      <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-5 py-10">
+        <div className="rounded-3xl bg-white px-6 py-10 text-center shadow-sm">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-3xl">
+            ✅
+          </div>
+          <h1 className="mt-5 text-2xl font-bold text-gray-900">
+            주문이 접수되었어요
+          </h1>
+          <p className="mt-2 text-gray-500">
+            <span className="font-semibold text-gray-900">{doneOrder.name}</span>님,
+            준비가 완료되면 불러드릴게요.
           </p>
-          <p className="mt-4 text-sm text-amber-700/70">✝️ 봉원교회 샘뜰 카페</p>
+
+          <PaymentInfo total={doneOrder.total} />
+
+          <p className="mt-5 text-sm text-gray-400">✝️ 봉원교회 샘뜰 카페</p>
           <button
-            onClick={() => setDoneOrderName(null)}
-            className="mt-8 rounded-lg bg-amber-600 px-6 py-3 font-semibold text-white shadow-sm hover:bg-amber-700"
+            onClick={() => setDoneOrder(null)}
+            className="mt-6 w-full rounded-2xl bg-blue-500 py-4 font-bold text-white transition hover:bg-blue-600 active:scale-[0.98]"
           >
             새 주문 하기
           </button>
@@ -110,18 +135,16 @@ export default function CustomerPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-4 pb-48 pt-8">
+    <main className="mx-auto max-w-2xl px-5 pb-64 pt-10">
       {/* 헤더 */}
-      <header className="mb-8 rounded-2xl border border-amber-100 bg-gradient-to-b from-white to-amber-50 px-6 py-7 text-center shadow-sm">
-        <h1 className="text-3xl font-bold text-amber-800">☕ 샘뜰 카페</h1>
-        <p className="mt-1.5 text-sm text-amber-700/70">
-          ✝️ 봉원교회 카페 · 주문하기
+      <header className="mb-8 px-1">
+        <p className="text-sm font-semibold text-blue-500">✝️ 봉원교회</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-gray-900">
+          샘뜰 카페
+        </h1>
+        <p className="mt-2 text-sm text-gray-500">
+          텀블러를 가져오시면 {formatPrice(TUMBLER_DISCOUNT)}을 할인해 드려요.
         </p>
-        <div className="mx-auto mt-3 flex max-w-[10rem] items-center gap-2 text-amber-300">
-          <span className="h-px flex-1 bg-amber-200" aria-hidden />
-          <span className="text-xs" aria-hidden>✝️</span>
-          <span className="h-px flex-1 bg-amber-200" aria-hidden />
-        </div>
       </header>
 
       {/* 메뉴 목록 */}
@@ -135,21 +158,20 @@ export default function CustomerPage() {
         orderedCategories(menu).map((category) => {
           const items = menu.filter((m) => m.category === category);
           return (
-            <section key={category} className="mb-8">
-              <h2 className="mb-3 flex items-center gap-2 text-lg font-bold text-amber-800">
-                <span className="h-5 w-1.5 rounded-full bg-amber-400" aria-hidden />
+            <section key={category} className="mb-7">
+              <h2 className="mb-2.5 px-1 text-sm font-bold text-gray-500">
                 {category}
               </h2>
-              <ul className="space-y-2">
+              <ul className="overflow-hidden rounded-2xl bg-white shadow-sm">
                 {items.map((item) => (
-                  <li key={item.id}>
+                  <li key={item.id} className="border-b border-gray-100 last:border-0">
                     <button
                       disabled={item.soldOut}
                       onClick={() => setSelected(item)}
-                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-amber-100 bg-white px-4 py-3.5 text-left shadow-sm transition hover:border-amber-300 hover:shadow active:bg-amber-50 disabled:opacity-40"
+                      className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-gray-50 active:bg-gray-100 disabled:opacity-40"
                     >
-                      <div>
-                        <div className="font-semibold">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-gray-900">
                           {item.name}
                           {item.soldOut && (
                             <span className="ml-2 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-500">
@@ -158,10 +180,12 @@ export default function CustomerPage() {
                           )}
                         </div>
                         {item.description && (
-                          <div className="text-xs text-gray-500">{item.description}</div>
+                          <div className="mt-0.5 text-xs text-gray-400">
+                            {item.description}
+                          </div>
                         )}
                       </div>
-                      <div className="font-semibold text-amber-700">
+                      <div className="shrink-0 font-bold text-gray-900">
                         {formatPrice(item.price)}
                       </div>
                     </button>
@@ -183,35 +207,37 @@ export default function CustomerPage() {
       )}
 
       {/* 하단 고정: 장바구니 + 주문자 정보 */}
-      <div className="fixed inset-x-0 bottom-0 border-t border-amber-100 bg-white/95 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] backdrop-blur">
-        <div className="mx-auto max-w-2xl px-4 py-3">
+      <div className="fixed inset-x-0 bottom-0 rounded-t-3xl bg-white shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
+        <div className="mx-auto max-w-2xl px-5 pb-5 pt-4">
           {cart.length > 0 && (
-            <ul className="mb-3 max-h-36 space-y-1 overflow-y-auto text-sm">
+            <ul className="mb-3 max-h-36 space-y-2 overflow-y-auto text-sm">
               {cart.map((line) => {
                 const key = cartLineKey(line);
                 return (
                   <li key={key} className="flex items-center justify-between gap-2">
                     <span className="truncate">
-                      {line.name}
+                      <span className="font-medium text-gray-900">{line.name}</span>
                       {line.temperature && (
-                        <span className="text-gray-500"> ({line.temperature})</span>
+                        <span className="text-gray-400"> · {line.temperature}</span>
                       )}
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
                       <button
                         onClick={() => changeQuantity(key, -1)}
-                        className="h-6 w-6 rounded-md border border-amber-200 bg-amber-50 font-semibold text-amber-700 leading-none hover:bg-amber-100"
+                        className="h-7 w-7 rounded-lg bg-gray-100 font-semibold text-gray-600 leading-none transition hover:bg-gray-200"
                       >
                         −
                       </button>
-                      <span className="w-5 text-center">{line.quantity}</span>
+                      <span className="w-5 text-center font-semibold text-gray-900">
+                        {line.quantity}
+                      </span>
                       <button
                         onClick={() => changeQuantity(key, 1)}
-                        className="h-6 w-6 rounded-md border border-amber-200 bg-amber-50 font-semibold text-amber-700 leading-none hover:bg-amber-100"
+                        className="h-7 w-7 rounded-lg bg-gray-100 font-semibold text-gray-600 leading-none transition hover:bg-gray-200"
                       >
                         +
                       </button>
-                      <span className="w-20 text-right font-medium">
+                      <span className="w-20 text-right font-semibold text-gray-900">
                         {formatPrice(line.unitPrice * line.quantity)}
                       </span>
                     </span>
@@ -221,21 +247,58 @@ export default function CustomerPage() {
             </ul>
           )}
 
-          <div className="mb-2">
+          {/* 텀블러 지참 할인 */}
+          <button
+            onClick={() => setBringTumbler((v) => !v)}
+            className={`mb-2.5 flex w-full items-center justify-between rounded-xl border-2 px-4 py-2.5 text-left text-sm transition ${
+              bringTumbler
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-100 bg-gray-50"
+            }`}
+          >
+            <span className="flex items-center gap-2.5 font-semibold text-gray-900">
+              <span
+                className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white transition ${
+                  bringTumbler ? "bg-blue-500" : "bg-gray-300"
+                }`}
+              >
+                ✓
+              </span>
+              🥤 텀블러를 가져왔어요
+            </span>
+            <span
+              className={`font-bold ${bringTumbler ? "text-blue-600" : "text-gray-400"}`}
+            >
+              −{formatPrice(TUMBLER_DISCOUNT)}
+            </span>
+          </button>
+
+          {discount > 0 && (
+            <div className="mb-2 flex items-center justify-between px-1 text-sm">
+              <span className="text-gray-500">
+                주문 금액 {formatPrice(subtotal)} · 텀블러 할인
+              </span>
+              <span className="font-bold text-blue-600">
+                −{formatPrice(discount)}
+              </span>
+            </div>
+          )}
+
+          <div className="mb-2.5">
             <input
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               placeholder="주문자 이름"
-              className="w-full rounded-lg border border-amber-200 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+              className="w-full rounded-xl bg-gray-100 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+          {error && <p className="mb-2 text-sm text-red-500">{error}</p>}
 
           <button
             onClick={submitOrder}
             disabled={submitting || cart.length === 0}
-            className="w-full rounded-xl bg-amber-600 py-3 font-bold text-white shadow-sm transition hover:bg-amber-700 disabled:opacity-50"
+            className="w-full rounded-2xl bg-blue-500 py-4 font-bold text-white transition hover:bg-blue-600 active:scale-[0.98] disabled:bg-gray-200 disabled:text-gray-400"
           >
             {submitting
               ? "주문 접수 중..."
@@ -246,6 +309,68 @@ export default function CustomerPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+// ------------------------------------------------------------
+// 주문 완료 화면의 계좌이체 안내 (계좌번호 복사 버튼 포함)
+// ------------------------------------------------------------
+function PaymentInfo({ total }: { total: number }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copyAccount() {
+    const text = BANK_ACCOUNT;
+    try {
+      // http(비보안 컨텍스트)에서는 navigator.clipboard가 없어 폴백을 사용
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // 복사가 막힌 환경에서는 화면의 계좌번호를 보고 직접 입력
+    }
+  }
+
+  return (
+    <div className="mt-6 rounded-2xl bg-gray-50 p-5 text-left">
+      <div className="text-sm font-bold text-gray-900">
+        💳 결제는 계좌이체로 부탁드려요
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <div>
+          <div className="font-bold tracking-wide text-gray-900">
+            {BANK_NAME} {BANK_ACCOUNT}
+          </div>
+          <div className="mt-0.5 text-sm text-gray-500">
+            예금주: {ACCOUNT_HOLDER}
+          </div>
+        </div>
+        <button
+          onClick={copyAccount}
+          className={`shrink-0 rounded-xl px-3.5 py-2.5 text-sm font-bold text-white transition ${
+            copied ? "bg-green-500" : "bg-blue-500 hover:bg-blue-600"
+          }`}
+        >
+          {copied ? "복사 완료 ✓" : "계좌번호 복사"}
+        </button>
+      </div>
+      <div className="mt-4 border-t border-gray-200 pt-3 text-sm text-gray-500">
+        이체 금액:{" "}
+        <span className="text-base font-bold text-blue-600">
+          {formatPrice(total)}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -266,30 +391,30 @@ function OptionModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl"
+        className="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-bold">{item.name}</h3>
-          <span className="font-semibold text-amber-700">{formatPrice(item.price)}</span>
+        <div className="mb-5 flex items-center justify-between">
+          <h3 className="text-xl font-bold text-gray-900">{item.name}</h3>
+          <span className="font-bold text-gray-900">{formatPrice(item.price)}</span>
         </div>
 
         {item.hasTemperature && (
           <div className="mb-4">
-            <div className="mb-2 text-sm font-medium text-gray-600">온도</div>
-            <div className="flex gap-2">
+            <div className="mb-2 text-sm font-medium text-gray-500">온도</div>
+            <div className="flex rounded-xl bg-gray-100 p-1">
               {(["HOT", "ICE"] as const).map((o) => (
                 <button
                   key={o}
                   onClick={() => setTemperature(o)}
-                  className={`flex-1 rounded-lg border py-2 text-sm font-semibold transition ${
+                  className={`flex-1 rounded-lg py-2 text-sm font-bold transition ${
                     temperature === o
-                      ? "border-amber-500 bg-amber-100 text-amber-800"
-                      : "border-amber-200 text-gray-500"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-400"
                   }`}
                 >
                   {o}
@@ -300,19 +425,21 @@ function OptionModal({
         )}
 
         {/* 수량 */}
-        <div className="mb-5 flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-600">수량</span>
+        <div className="mb-6 flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-500">수량</span>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="h-8 w-8 rounded-lg border border-amber-200 bg-amber-50 text-lg font-semibold text-amber-700 leading-none hover:bg-amber-100"
+              className="h-9 w-9 rounded-xl bg-gray-100 text-lg font-semibold text-gray-600 leading-none transition hover:bg-gray-200"
             >
               −
             </button>
-            <span className="w-6 text-center font-semibold">{quantity}</span>
+            <span className="w-6 text-center font-bold text-gray-900">
+              {quantity}
+            </span>
             <button
               onClick={() => setQuantity((q) => q + 1)}
-              className="h-8 w-8 rounded-lg border border-amber-200 bg-amber-50 text-lg font-semibold text-amber-700 leading-none hover:bg-amber-100"
+              className="h-9 w-9 rounded-xl bg-gray-100 text-lg font-semibold text-gray-600 leading-none transition hover:bg-gray-200"
             >
               +
             </button>
@@ -322,7 +449,7 @@ function OptionModal({
         <div className="flex gap-2">
           <button
             onClick={onClose}
-            className="w-1/3 rounded-xl border border-amber-200 py-3 font-semibold text-gray-600 hover:bg-amber-50"
+            className="w-1/3 rounded-2xl bg-gray-100 py-4 font-semibold text-gray-600 transition hover:bg-gray-200"
           >
             취소
           </button>
@@ -336,7 +463,7 @@ function OptionModal({
                 unitPrice: item.price,
               })
             }
-            className="flex-1 rounded-xl bg-amber-600 py-3 font-bold text-white hover:bg-amber-700"
+            className="flex-1 rounded-2xl bg-blue-500 py-4 font-bold text-white transition hover:bg-blue-600 active:scale-[0.98]"
           >
             {formatPrice(item.price * quantity)} 담기
           </button>
