@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "샘뜰 카페 | 봉원교회",
-  description: "샘뜰 카페(봉원교회 카페) 주문 페이지",
+  title: "샘뜰 카페 포스 | 봉원교회",
+  description: "샘뜰 카페(봉원교회 카페) 주문·매출 관리 포스",
 };
 
 export const viewport: Viewport = {

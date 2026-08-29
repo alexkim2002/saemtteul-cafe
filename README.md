@@ -1,12 +1,19 @@
-# ✝️ 샘뜰 카페 (봉원교회 카페) 주문 홈페이지
+# ✝️ 샘뜰 카페 (봉원교회 카페) 포스
 
-Next.js + Tailwind CSS + Supabase로 만든 카페 주문/관리 시스템입니다.
+Next.js + Tailwind CSS + Supabase로 만든 카페 **포스(POS)** 시스템입니다.
+손님이 직접 주문하는 페이지는 없애고, 카운터에서 관리자 계정 하나로 주문을 받고
+매출을 기록합니다.
 
-- **고객 페이지** `/` — 메뉴 보기 → 옵션(HOT/ICE) 선택 → 장바구니 → 텀블러 지참 시 500원 할인 → 이름 입력 후 주문 (완료 화면에 계좌이체 안내)
-- **관리자 페이지** `/admin` — 비밀번호 입장 후 세 개 탭:
-  - **주문**: 실시간 주문 목록, 상태 변경(대기 → 완료), 오류 주문 삭제, 수동 주문 추가
-  - **매출**: 달력에서 날짜를 골라 하루 단위 매출·주문 수·평균·메뉴별 판매 확인 (달력에 일별 매출 표시, 월 합계 제공)
-  - **메뉴**: 메뉴 추가/수정/삭제, 품절 토글 (수정 즉시 주문 페이지에 반영)
+- 주소로 접속하면(`/`) 바로 포스 로그인(`/admin`)으로 넘어갑니다.
+- 로그인 후 탭 네 개로 운영합니다:
+  - **주문받기** — 메뉴 버튼을 터치해 주문서를 만들고, `계좌이체` 또는 `현금`을 누르면
+    그 자리에서 결제 완료 처리되어 매출로 기록됩니다. (HOT/ICE는 버튼 한 번으로 선택,
+    텀블러 지참 시 500원 할인, 이름은 비워두면 `3번`처럼 그날 순번으로 저장)
+  - **주문내역** — 날짜별 주문 목록. 건수·매출·계좌이체/현금 합계를 위에 요약하고,
+    잘못 찍은 주문 삭제와 완료 ↔ 대기 전환을 할 수 있습니다.
+  - **매출** — 달력에서 날짜를 골라 하루 매출·주문 수·평균·결제수단별·메뉴별 판매 확인
+    (달력 칸에 일별 매출 표시, 월 합계 제공)
+  - **메뉴** — 메뉴 추가/수정/삭제, 품절 토글 (수정 즉시 주문받기 화면에 반영)
 
 배포 주소: https://seamtteul-cafe.vercel.app (main 브랜치에 push하면 Vercel이 자동 재배포)
 
@@ -27,6 +34,9 @@ http://localhost:3000 접속. **Supabase 설정 전에도 화면은 뜨지만**(
 1. https://supabase.com 에서 무료 프로젝트를 만듭니다.
 2. 대시보드 왼쪽 **SQL Editor** 에 `supabase/schema.sql` 파일 내용을 붙여넣고 **Run** 합니다.
    (orders/menu_items 테이블 + 접근 정책 + 기본 메뉴 시드 + 실시간 설정이 한 번에 생성됩니다)
+   - **이미 예전 버전을 쓰고 있었다면 이 파일을 한 번 더 Run 해 주세요.** 포스에서 쓰는
+     `payment_method`(결제수단)와 `discount`(할인) 컬럼이 추가됩니다. 여러 번 실행해도
+     안전하게 만들어 두었습니다.
 3. 대시보드 **Project Settings > API** 에서 두 값을 복사합니다:
    - `Project URL`
    - `anon public` (publishable) 키
@@ -35,47 +45,59 @@ http://localhost:3000 접속. **Supabase 설정 전에도 화면은 뜨지만**(
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=발급받은_키
-ADMIN_PASSWORD=원하는비밀번호
+ADMIN_PASSWORD=abc123
 ```
 
 5. dev 서버를 재시작합니다 (`Ctrl+C` 후 `npm run dev`).
 
 ## 3. 메뉴 수정하는 법
 
-**관리자 페이지(`/admin`) > 메뉴 탭**에서 추가/수정/삭제/품절 처리를 하면 됩니다.
-코드 수정이나 재배포 없이 즉시 주문 페이지에 반영됩니다.
+**포스 > 메뉴 탭**에서 추가/수정/삭제/품절 처리를 하면 됩니다.
+코드 수정이나 재배포 없이 즉시 주문받기 화면에 반영됩니다.
 
 `src/data/menu.ts`의 `FALLBACK_MENU`는 Supabase에 연결하지 못했을 때만 쓰이는
 예비 메뉴이므로 평소에는 손댈 필요가 없습니다.
 
-## 4. 관리자 페이지 인증
+## 4. 로그인
 
-- 주소: `/admin` · 비밀번호: `ADMIN_PASSWORD` 환경변수 값
+- 주소: `/admin` · 비밀번호: `ADMIN_PASSWORD` 환경변수 값 (설정하지 않으면 **abc123**)
 - 비밀번호 검증은 서버 API(`/api/admin/login`)에서 하고, 성공 시 httpOnly 세션 쿠키(7일)가
   발급됩니다. 비밀번호는 브라우저에 노출되지 않습니다.
-- Vercel 배포 시 프로젝트 **Settings > Environment Variables**에 `ADMIN_PASSWORD`를 등록해야 합니다.
-- 새 주문은 Supabase Realtime으로 자동 갱신됩니다. (안전망으로 15초 폴링 병행)
+- 태블릿 한 대로 쓰면 한 번 로그인해 두고 계속 쓰면 됩니다. 기기를 두 대 이상 쓰면
+  Supabase Realtime으로 주문내역이 서로 동기화됩니다.
 
 > ⚠️ 남은 보안 한계: 주문/메뉴 데이터의 읽기·쓰기는 여전히 공개 anon 키 + RLS 정책으로
 > 이루어집니다. 교회 내부용으로는 충분하지만, 외부에 완전히 공개할 서비스라면
 > 데이터 작업도 서버 API로 옮기거나 Supabase Auth 기반으로 정책을 좁히세요.
+
+## 5. 금액·계좌 정보 바꾸기
+
+텀블러 할인 금액과 계좌이체 안내 문구는 `src/lib/config.ts` 한 곳에 모여 있습니다.
 
 ## 폴더 구조
 
 ```
 src/
   app/
-    page.tsx            # 고객 주문 페이지 (/)
-    admin/page.tsx      # 관리자 페이지 (/admin) — 주문/매출/메뉴 탭
+    page.tsx            # 루트(/) → /admin 으로 이동
+    admin/page.tsx      # 로그인 + 포스 셸 (탭 전환)
     api/admin/          # 관리자 로그인/세션 API (서버 측 인증)
     layout.tsx          # 공통 레이아웃/메타데이터
     globals.css         # 전역 스타일 (밝은 테마 고정, 모바일 터치 보정)
+  components/admin/
+    PosTab.tsx          # 주문받기 (메뉴 버튼판 + 주문서 + 결제)
+    OrdersTab.tsx       # 주문내역 (날짜별 목록/요약/삭제)
+    SalesTab.tsx        # 매출 (달력 + 일별 상세)
+    MenuTab.tsx         # 메뉴 관리
   data/
     menu.ts             # 메뉴 타입 + 예비(폴백) 메뉴
   lib/
+    config.ts           # 할인 금액·계좌 정보
+    date.ts             # 하루 단위 날짜 유틸
+    orders.ts           # 주문 저장 + 주문번호 매기기
     supabase.ts         # Supabase 클라이언트
     menu.ts             # 메뉴 불러오기 (DB 우선, 실패 시 폴백)
-    types.ts            # 주문 타입/포맷 함수
+    types.ts            # 주문/결제수단 타입, 포맷 함수
     adminAuth.ts        # 관리자 세션 토큰 (서버 전용)
 supabase/
   schema.sql            # DB 테이블/정책/시드 SQL (Supabase SQL Editor에서 실행)

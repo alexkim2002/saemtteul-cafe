@@ -1,5 +1,5 @@
 -- ============================================================
--- 샘뜰 카페 주문 테이블 스키마
+-- 샘뜰 카페 POS 스키마 (주문 + 메뉴)
 -- Supabase 대시보드 > SQL Editor 에 붙여넣고 Run 하세요.
 -- ============================================================
 
@@ -10,10 +10,29 @@ create table if not exists public.orders (
   phone text not null default '',
   items jsonb not null,          -- [{ menuId, name, temperature, quantity, unitPrice }]
   total integer not null,        -- 총 금액 (원)
-  status text not null default '대기'
+  status text not null default '완료'
     check (status in ('대기', '완료')),
-  memo text
+  memo text,
+  discount integer not null default 0,       -- 텀블러 할인 등 깎아준 금액 (원)
+  payment_method text not null default '계좌이체'
+    check (payment_method in ('계좌이체', '현금'))
 );
+
+-- ------------------------------------------------------------
+-- POS 개편으로 추가된 컬럼 (이미 orders 테이블을 만들어 두었다면
+-- 이 파일을 다시 Run 하기만 하면 아래 두 컬럼이 더해집니다)
+-- ------------------------------------------------------------
+alter table public.orders
+  add column if not exists discount integer not null default 0;
+
+alter table public.orders
+  add column if not exists payment_method text not null default '계좌이체';
+
+-- 결제수단 값 제한 (계좌이체 / 현금)
+alter table public.orders drop constraint if exists orders_payment_method_check;
+alter table public.orders
+  add constraint orders_payment_method_check
+  check (payment_method in ('계좌이체', '현금'));
 
 -- RLS 활성화 + 익명(anon) 키로 읽기/쓰기/수정 허용
 -- (교회 카페 내부용 간단 구성입니다. 외부 공개 서비스라면 정책을 더 좁히세요.)
@@ -36,8 +55,15 @@ drop policy if exists "anon delete orders" on public.orders;
 create policy "anon delete orders" on public.orders
   for delete to anon using (true);
 
--- 관리자 페이지 실시간 갱신을 위해 Realtime 발행에 테이블 추가
-alter publication supabase_realtime add table public.orders;
+-- 포스 실시간 갱신을 위해 Realtime 발행에 테이블 추가
+-- (이미 추가된 상태에서 이 파일을 다시 Run 해도 오류가 나지 않도록 감쌌습니다)
+do $$
+begin
+  alter publication supabase_realtime add table public.orders;
+exception
+  when duplicate_object then null;
+end
+$$;
 
 -- ============================================================
 -- 메뉴 테이블
