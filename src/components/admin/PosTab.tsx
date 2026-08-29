@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { MenuItem, orderedCategories } from "@/data/menu";
+import { useMemo, useState } from "react";
+import { MenuItem, favoriteItems, orderedCategories } from "@/data/menu";
 import {
   ACCOUNT_HOLDER,
   BANK_ACCOUNT,
@@ -10,13 +10,29 @@ import {
 } from "@/lib/config";
 import { insertOrder, nextOrderLabel } from "@/lib/orders";
 import { getSupabase } from "@/lib/supabase";
-import { OrderItem, PaymentMethod, formatPrice, itemsTotal } from "@/lib/types";
+import {
+  OrderItem,
+  PaymentMethod,
+  formatPrice,
+  itemsTotal,
+  tumblerCount,
+} from "@/lib/types";
 
 type CartLine = OrderItem;
 
-/** 같은 메뉴 + 같은 온도면 한 줄로 합칩니다 */
+/** 즐겨찾기 칩 이름 (카테고리 이름과 겹치지 않게 이모지를 붙여 둡니다) */
+const FAVORITE_TAB = "⭐ 자주 쓰는";
+const ALL_TAB = "전체";
+
+/** 같은 메뉴 + 같은 온도 + 같은 텀블러 여부면 한 줄로 합칩니다 */
 function cartLineKey(line: CartLine): string {
-  return `${line.menuId}|${line.temperature}`;
+  return `${line.menuId}|${line.temperature}|${line.tumbler ? "T" : "N"}`;
+}
+
+/** 한 줄에 붙는 텀블러 할인액 (잔 수만큼, 음료값을 넘지 않게) */
+function lineDiscount(line: CartLine): number {
+  if (!line.tumbler) return 0;
+  return Math.min(TUMBLER_DISCOUNT * line.quantity, line.unitPrice * line.quantity);
 }
 
 interface Receipt {
@@ -37,31 +53,40 @@ export default function PosTab({
   onOrderSaved: () => void;
 }) {
   const [cart, setCart] = useState<CartLine[]>([]);
-  const [category, setCategory] = useState<string>("전체");
+  const [tab, setTab] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState("");
-  const [memo, setMemo] = useState("");
-  const [bringTumbler, setBringTumbler] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  // null이면 "장바구니가 비면 접고, 담기면 편다" 기본 동작
+  const [manualOpen, setManualOpen] = useState<boolean | null>(null);
 
-  const categories = useMemo(() => ["전체", ...orderedCategories(menu)], [menu]);
-  const visible = useMemo(
-    () => (category === "전체" ? menu : menu.filter((m) => m.category === category)),
-    [menu, category]
+  const favorites = useMemo(() => favoriteItems(menu), [menu]);
+  const tabs = useMemo(
+    () => [
+      ...(favorites.length > 0 ? [FAVORITE_TAB] : []),
+      ALL_TAB,
+      ...orderedCategories(menu),
+    ],
+    [favorites, menu]
   );
 
-  // 메뉴가 바뀌어 선택한 카테고리가 사라지면 "전체"로 되돌립니다
-  useEffect(() => {
-    if (!categories.includes(category)) setCategory("전체");
-  }, [categories, category]);
+  // 선택한 칩이 사라졌으면(메뉴 수정 등) 기본 칩으로 되돌립니다
+  const activeTab =
+    tab && tabs.includes(tab) ? tab : favorites.length > 0 ? FAVORITE_TAB : ALL_TAB;
+
+  const visible = useMemo(() => {
+    if (activeTab === FAVORITE_TAB) return favorites;
+    if (activeTab === ALL_TAB) return menu;
+    return menu.filter((m) => m.category === activeTab);
+  }, [activeTab, favorites, menu]);
 
   const subtotal = itemsTotal(cart);
-  const discount =
-    bringTumbler && cart.length > 0 ? Math.min(TUMBLER_DISCOUNT, subtotal) : 0;
+  const discount = cart.reduce((sum, l) => sum + lineDiscount(l), 0);
   const total = subtotal - discount;
   const itemCount = cart.reduce((sum, l) => sum + l.quantity, 0);
+  const expanded = manualOpen ?? cart.length > 0;
 
   function addItem(item: MenuItem, temperature: "HOT" | "ICE" | null) {
     setError(null);
@@ -71,17 +96,19 @@ export default function PosTab({
       temperature,
       quantity: 1,
       unitPrice: item.price,
+      tumbler: false,
     };
-    setCart((prev) => {
-      const key = cartLineKey(line);
-      const found = prev.find((l) => cartLineKey(l) === key);
-      if (found) {
-        return prev.map((l) =>
-          cartLineKey(l) === key ? { ...l, quantity: l.quantity + 1 } : l
-        );
-      }
-      return [...prev, line];
-    });
+    setCart((prev) => mergeLine(prev, line));
+  }
+
+  /** 이미 담긴 줄과 키가 같으면 수량을 더하고, 없으면 새 줄로 붙입니다 */
+  function mergeLine(lines: CartLine[], line: CartLine): CartLine[] {
+    const key = cartLineKey(line);
+    const found = lines.find((l) => cartLineKey(l) === key);
+    if (!found) return [...lines, line];
+    return lines.map((l) =>
+      cartLineKey(l) === key ? { ...l, quantity: l.quantity + line.quantity } : l
+    );
   }
 
   function changeQuantity(key: string, delta: number) {
@@ -92,11 +119,20 @@ export default function PosTab({
     );
   }
 
+  /** 줄 단위 텀블러 토글 — 손님마다 텀블러 여부가 다를 수 있어 항목별로 답니다 */
+  function toggleTumbler(key: string) {
+    setCart((prev) => {
+      const target = prev.find((l) => cartLineKey(l) === key);
+      if (!target) return prev;
+      const rest = prev.filter((l) => cartLineKey(l) !== key);
+      return mergeLine(rest, { ...target, tumbler: !target.tumbler });
+    });
+  }
+
   function clearCart() {
     setCart([]);
-    setBringTumbler(false);
     setCustomerName("");
-    setMemo("");
+    setManualOpen(null);
     setError(null);
   }
 
@@ -113,6 +149,7 @@ export default function PosTab({
     setSaving(true);
     const typed = customerName.trim();
     const label = typed || (await nextOrderLabel(supabase));
+    const tumblers = tumblerCount(cart);
     const result = await insertOrder(supabase, {
       customerName: label,
       items: cart,
@@ -120,9 +157,9 @@ export default function PosTab({
       discount,
       paymentMethod: method,
       memo:
-        [memo.trim(), discount > 0 ? `텀블러 할인 -${formatPrice(discount)}` : ""]
-          .filter(Boolean)
-          .join(" · ") || null,
+        tumblers > 0
+          ? `텀블러 ${tumblers}잔 (−${formatPrice(discount)})`
+          : null,
       status: "완료",
     });
     setSaving(false);
@@ -142,16 +179,16 @@ export default function PosTab({
   }
 
   return (
-    <section className="grid gap-4 lg:grid-cols-[1fr_22rem] xl:grid-cols-[1fr_24rem]">
-      {/* ---------------- 왼쪽: 메뉴 버튼판 ---------------- */}
-      <div>
-        <div className="mb-3 flex flex-wrap gap-2">
-          {categories.map((c) => (
+    <section className="lg:grid lg:grid-cols-[1fr_21rem] lg:gap-4 xl:grid-cols-[1fr_23rem]">
+      {/* ---------------- 메뉴 버튼판 ---------------- */}
+      <div className={expanded ? "pb-[19rem] lg:pb-0" : "pb-24 lg:pb-0"}>
+        <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+          {tabs.map((c) => (
             <button
               key={c}
-              onClick={() => setCategory(c)}
-              className={`rounded-full px-4 py-2 text-sm font-bold transition ${
-                category === c
+              onClick={() => setTab(c)}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold transition ${
+                activeTab === c
                   ? "bg-gray-900 text-white"
                   : "bg-white text-gray-500 shadow-sm hover:bg-gray-50"
               }`}
@@ -164,11 +201,13 @@ export default function PosTab({
         {menuLoading ? (
           <p className="py-20 text-center text-gray-400">메뉴를 불러오는 중...</p>
         ) : visible.length === 0 ? (
-          <p className="py-20 text-center text-gray-400">
-            등록된 메뉴가 없습니다. &apos;메뉴&apos; 탭에서 추가해 주세요.
+          <p className="py-20 text-center text-sm text-gray-400">
+            {activeTab === FAVORITE_TAB
+              ? "즐겨찾기가 비어 있어요. 메뉴 탭에서 ⭐를 눌러 자주 나가는 메뉴를 등록해 보세요."
+              : "등록된 메뉴가 없습니다. 메뉴 탭에서 추가해 주세요."}
           </p>
         ) : (
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
             {visible.map((item) => (
               <MenuTile key={item.id} item={item} onAdd={addItem} />
             ))}
@@ -176,160 +215,172 @@ export default function PosTab({
         )}
       </div>
 
-      {/* ---------------- 오른쪽: 주문서 ---------------- */}
-      <aside className="sticky bottom-0 z-10 self-start lg:bottom-auto lg:top-4">
-        <div className="rounded-3xl bg-white p-4 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] lg:shadow-sm">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-bold text-gray-900">
+      {/* ---------------- 주문서 (모바일: 하단 시트 / 데스크톱: 오른쪽 고정) ---------------- */}
+      <aside className="fixed inset-x-0 bottom-0 z-20 lg:sticky lg:inset-x-auto lg:bottom-auto lg:top-4 lg:self-start">
+        <div className="rounded-t-3xl bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] lg:rounded-3xl lg:pb-4 lg:shadow-sm">
+          {/* 시트 손잡이 (모바일에서 접었다 펴기) */}
+          <button
+            onClick={() => setManualOpen(!expanded)}
+            className="mb-2 flex w-full items-center justify-between lg:pointer-events-none"
+          >
+            <span className="flex items-center gap-1.5 font-bold text-gray-900">
               주문서
               {itemCount > 0 && (
-                <span className="ml-1.5 text-sm font-semibold text-blue-500">
-                  {itemCount}개
+                <span className="rounded-full bg-blue-500 px-2 py-0.5 text-xs font-bold text-white">
+                  {itemCount}
                 </span>
               )}
-            </h2>
-            {cart.length > 0 && (
-              <button
-                onClick={clearCart}
-                className="rounded-lg px-2 py-1 text-xs font-semibold text-gray-400 transition hover:bg-gray-100 hover:text-red-500"
-              >
-                전체 비우기
-              </button>
-            )}
-          </div>
-
-          {cart.length === 0 ? (
-            <p className="py-8 text-center text-sm text-gray-400">
-              메뉴를 눌러 담아 주세요
-            </p>
-          ) : (
-            <ul className="mb-3 max-h-56 space-y-2 overflow-y-auto lg:max-h-[46vh]">
-              {cart.map((line) => {
-                const key = cartLineKey(line);
-                return (
-                  <li key={key} className="flex items-center gap-2 text-sm">
-                    <span className="min-w-0 flex-1 truncate">
-                      <span className="font-semibold text-gray-900">{line.name}</span>
-                      {line.temperature && (
-                        <span
-                          className={`ml-1 text-xs font-bold ${
-                            line.temperature === "HOT" ? "text-red-400" : "text-blue-400"
-                          }`}
-                        >
-                          {line.temperature}
-                        </span>
-                      )}
-                    </span>
-                    <button
-                      onClick={() => changeQuantity(key, -1)}
-                      aria-label="수량 감소"
-                      className="h-8 w-8 shrink-0 rounded-lg bg-gray-100 text-lg font-semibold leading-none text-gray-600 transition hover:bg-gray-200"
-                    >
-                      −
-                    </button>
-                    <span className="w-5 shrink-0 text-center font-bold text-gray-900">
-                      {line.quantity}
-                    </span>
-                    <button
-                      onClick={() => changeQuantity(key, 1)}
-                      aria-label="수량 증가"
-                      className="h-8 w-8 shrink-0 rounded-lg bg-gray-100 text-lg font-semibold leading-none text-gray-600 transition hover:bg-gray-200"
-                    >
-                      +
-                    </button>
-                    <span className="w-16 shrink-0 text-right font-semibold text-gray-900">
-                      {formatPrice(line.unitPrice * line.quantity)}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-
-          {/* 텀블러 할인 */}
-          <button
-            onClick={() => setBringTumbler((v) => !v)}
-            className={`mb-2 flex w-full items-center justify-between rounded-xl border-2 px-3 py-2.5 text-left text-sm transition ${
-              bringTumbler ? "border-blue-500 bg-blue-50" : "border-gray-100 bg-gray-50"
-            }`}
-          >
-            <span className="flex items-center gap-2 font-semibold text-gray-900">
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white transition ${
-                  bringTumbler ? "bg-blue-500" : "bg-gray-300"
-                }`}
-              >
-                ✓
-              </span>
-              🥤 텀블러 지참
             </span>
-            <span
-              className={`font-bold ${bringTumbler ? "text-blue-600" : "text-gray-400"}`}
-            >
-              −{formatPrice(TUMBLER_DISCOUNT)}
+            <span className="flex items-center gap-2">
+              {!expanded && total > 0 && (
+                <span className="font-bold text-gray-900">{formatPrice(total)}</span>
+              )}
+              <span className="text-gray-300 lg:hidden">{expanded ? "▾" : "▴"}</span>
             </span>
           </button>
 
-          <input
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            placeholder="주문자 이름 (비우면 번호로 저장)"
-            className="mb-2 w-full rounded-xl bg-gray-100 px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <input
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            placeholder="메모 (선택 · 예: 샷 추가)"
-            className="mb-3 w-full rounded-xl bg-gray-100 px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-
-          {/* 합계 */}
-          <div className="mb-3 border-t border-gray-100 pt-3">
-            {discount > 0 && (
-              <div className="mb-1 flex items-center justify-between text-sm">
-                <span className="text-gray-500">할인 전 {formatPrice(subtotal)}</span>
-                <span className="font-bold text-blue-600">−{formatPrice(discount)}</span>
-              </div>
+          <div className={expanded ? "block" : "hidden"}>
+            {cart.length === 0 ? (
+              <p className="py-6 text-center text-sm text-gray-400">
+                메뉴를 눌러 담아 주세요
+              </p>
+            ) : (
+              <>
+                <ul className="mb-2 max-h-[30vh] space-y-1.5 overflow-y-auto lg:max-h-[42vh]">
+                  {cart.map((line) => {
+                    const key = cartLineKey(line);
+                    const lineTotal = line.unitPrice * line.quantity - lineDiscount(line);
+                    return (
+                      <li key={key} className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => toggleTumbler(key)}
+                          aria-label="텀블러 지참"
+                          title={`텀블러 지참 (잔당 −${formatPrice(TUMBLER_DISCOUNT)})`}
+                          className={`h-9 w-9 shrink-0 rounded-xl text-base leading-none transition ${
+                            line.tumbler
+                              ? "bg-blue-500 text-white"
+                              : "bg-gray-100 opacity-50 grayscale hover:opacity-100"
+                          }`}
+                        >
+                          🥤
+                        </button>
+                        <span className="min-w-0 flex-1 truncate text-sm">
+                          <span className="font-semibold text-gray-900">{line.name}</span>
+                          {line.temperature && (
+                            <span
+                              className={`ml-1 text-xs font-bold ${
+                                line.temperature === "HOT"
+                                  ? "text-red-400"
+                                  : "text-blue-400"
+                              }`}
+                            >
+                              {line.temperature}
+                            </span>
+                          )}
+                          {line.tumbler && (
+                            <span className="ml-1 text-xs font-bold text-blue-500">
+                              텀블러
+                            </span>
+                          )}
+                        </span>
+                        <button
+                          onClick={() => changeQuantity(key, -1)}
+                          aria-label="수량 감소"
+                          className="h-9 w-9 shrink-0 rounded-xl bg-gray-100 text-lg font-semibold leading-none text-gray-600 transition hover:bg-gray-200"
+                        >
+                          −
+                        </button>
+                        <span className="w-5 shrink-0 text-center font-bold text-gray-900">
+                          {line.quantity}
+                        </span>
+                        <button
+                          onClick={() => changeQuantity(key, 1)}
+                          aria-label="수량 증가"
+                          className="h-9 w-9 shrink-0 rounded-xl bg-gray-100 text-lg font-semibold leading-none text-gray-600 transition hover:bg-gray-200"
+                        >
+                          +
+                        </button>
+                        <span className="w-[4.5rem] shrink-0 text-right text-sm font-bold text-gray-900">
+                          {formatPrice(lineTotal)}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="mb-2 text-xs text-gray-400">
+                  🥤를 누르면 그 음료만 {formatPrice(TUMBLER_DISCOUNT)} 할인됩니다.
+                </p>
+              </>
             )}
-            <div className="flex items-baseline justify-between">
-              <span className="text-sm font-semibold text-gray-500">받을 금액</span>
-              <span className="text-2xl font-bold text-gray-900">
-                {formatPrice(total)}
-              </span>
+
+            <div className="mb-2 flex gap-2">
+              <input
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="이름 (선택 · 비우면 번호로 저장)"
+                className="min-w-0 flex-1 rounded-xl bg-gray-100 px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {cart.length > 0 && (
+                <button
+                  onClick={clearCart}
+                  className="shrink-0 rounded-xl bg-gray-100 px-3 text-xs font-semibold text-gray-500 transition hover:bg-red-50 hover:text-red-500"
+                >
+                  비우기
+                </button>
+              )}
             </div>
+
+            <div className="mb-2.5 border-t border-gray-100 pt-2.5">
+              {discount > 0 && (
+                <div className="mb-1 flex items-center justify-between text-sm">
+                  <span className="text-gray-500">
+                    할인 전 {formatPrice(subtotal)} · 텀블러 {tumblerCount(cart)}잔
+                  </span>
+                  <span className="font-bold text-blue-600">
+                    −{formatPrice(discount)}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm font-semibold text-gray-500">받을 금액</span>
+                <span className="text-2xl font-bold text-gray-900">
+                  {formatPrice(total)}
+                </span>
+              </div>
+            </div>
+
+            {error && (
+              <p className="mb-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">
+                {error}
+              </p>
+            )}
+            {notice && (
+              <p className="mb-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                {notice}
+              </p>
+            )}
           </div>
 
-          {error && (
-            <p className="mb-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">
-              {error}
-            </p>
-          )}
-          {notice && (
-            <p className="mb-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
-              {notice}
-            </p>
-          )}
-
-          {/* 결제 = 매출 기록 */}
+          {/* 결제 버튼은 접어도 항상 보입니다 */}
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => pay("계좌이체")}
               disabled={saving || cart.length === 0}
-              className="rounded-2xl bg-blue-500 py-4 font-bold text-white transition hover:bg-blue-600 active:scale-[0.98] disabled:bg-gray-200 disabled:text-gray-400"
+              className="rounded-2xl bg-blue-500 py-3.5 font-bold text-white transition hover:bg-blue-600 active:scale-[0.98] disabled:bg-gray-200 disabled:text-gray-400"
             >
               계좌이체
             </button>
             <button
               onClick={() => pay("현금")}
               disabled={saving || cart.length === 0}
-              className="rounded-2xl bg-gray-900 py-4 font-bold text-white transition hover:bg-gray-800 active:scale-[0.98] disabled:bg-gray-200 disabled:text-gray-400"
+              className="rounded-2xl bg-gray-900 py-3.5 font-bold text-white transition hover:bg-gray-800 active:scale-[0.98] disabled:bg-gray-200 disabled:text-gray-400"
             >
               현금
             </button>
           </div>
-          <p className="mt-2 text-center text-xs text-gray-400">
-            {saving ? "저장 중..." : "결제 버튼을 누르면 바로 매출로 기록됩니다"}
-          </p>
+          {saving && (
+            <p className="mt-1.5 text-center text-xs text-gray-400">저장 중...</p>
+          )}
         </div>
       </aside>
 
@@ -350,9 +401,11 @@ function MenuTile({
 }) {
   if (item.soldOut) {
     return (
-      <div className="flex min-h-28 select-none flex-col justify-between rounded-2xl bg-white p-3 opacity-50 shadow-sm">
+      <div className="flex min-h-[6.5rem] select-none flex-col justify-between rounded-2xl bg-white p-3 opacity-50 shadow-sm">
         <div>
-          <div className="font-bold text-gray-400 line-through">{item.name}</div>
+          <div className="font-bold leading-snug text-gray-400 line-through">
+            {item.name}
+          </div>
           <div className="mt-0.5 text-xs font-bold text-red-400">품절</div>
         </div>
         <div className="text-right text-sm font-bold text-gray-400">
@@ -366,18 +419,18 @@ function MenuTile({
     return (
       <button
         onClick={() => onAdd(item, null)}
-        className="flex min-h-28 select-none flex-col justify-between rounded-2xl bg-white p-3 text-left shadow-sm transition hover:bg-blue-50 active:scale-[0.97]"
+        className="flex min-h-[6.5rem] select-none flex-col justify-between rounded-2xl bg-white p-3 text-left shadow-sm transition hover:bg-blue-50 active:scale-[0.97]"
       >
-        <div className="font-bold leading-snug text-gray-900">{item.name}</div>
-        <div className="text-right text-sm font-bold text-gray-900">
+        <span className="font-bold leading-snug text-gray-900">{item.name}</span>
+        <span className="text-right text-sm font-bold text-gray-900">
           {formatPrice(item.price)}
-        </div>
+        </span>
       </button>
     );
   }
 
   return (
-    <div className="flex min-h-28 select-none flex-col justify-between rounded-2xl bg-white p-3 shadow-sm">
+    <div className="flex min-h-[6.5rem] select-none flex-col justify-between rounded-2xl bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-1">
         <span className="font-bold leading-snug text-gray-900">{item.name}</span>
         <span className="shrink-0 text-xs font-bold text-gray-400">
@@ -387,13 +440,13 @@ function MenuTile({
       <div className="mt-2 grid grid-cols-2 gap-1.5">
         <button
           onClick={() => onAdd(item, "HOT")}
-          className="rounded-xl bg-red-50 py-2 text-sm font-bold text-red-500 transition hover:bg-red-100 active:scale-95"
+          className="rounded-xl bg-red-50 py-2.5 text-sm font-bold text-red-500 transition hover:bg-red-100 active:scale-95"
         >
           HOT
         </button>
         <button
           onClick={() => onAdd(item, "ICE")}
-          className="rounded-xl bg-blue-50 py-2 text-sm font-bold text-blue-500 transition hover:bg-blue-100 active:scale-95"
+          className="rounded-xl bg-blue-50 py-2.5 text-sm font-bold text-blue-500 transition hover:bg-blue-100 active:scale-95"
         >
           ICE
         </button>
@@ -456,6 +509,7 @@ function ReceiptModal({ receipt, onClose }: { receipt: Receipt; onClose: () => v
               <span>
                 {item.name}
                 {item.temperature && ` (${item.temperature})`} x{item.quantity}
+                {item.tumbler && " 🥤"}
               </span>
               <span className="font-semibold text-gray-900">
                 {formatPrice(item.unitPrice * item.quantity)}

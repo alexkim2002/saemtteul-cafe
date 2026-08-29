@@ -17,6 +17,8 @@ export interface MenuItem {
   hasTemperature: boolean;
   description: string | null;
   soldOut: boolean;
+  /** 즐겨찾기 — 포스 첫 화면에 모아서 보여줍니다 */
+  favorite: boolean;
   /** 같은 카테고리 안에서의 표시 순서 (작을수록 위) */
   sortOrder: number;
 }
@@ -31,6 +33,8 @@ export interface MenuRow {
   description: string | null;
   sold_out: boolean;
   sort_order: number;
+  /** is_favorite 컬럼이 아직 없는 DB에서도 동작하도록 선택 필드로 둡니다 */
+  is_favorite?: boolean;
 }
 
 export function rowToMenuItem(row: MenuRow): MenuItem {
@@ -42,6 +46,7 @@ export function rowToMenuItem(row: MenuRow): MenuItem {
     hasTemperature: row.has_temperature,
     description: row.description,
     soldOut: row.sold_out,
+    favorite: row.is_favorite ?? false,
     sortOrder: row.sort_order,
   };
 }
@@ -62,6 +67,11 @@ export function sortMenuItems(items: MenuItem[]): MenuItem[] {
   );
 }
 
+/** 즐겨찾기로 지정한 메뉴만 (표시 순서 유지) */
+export function favoriteItems(items: MenuItem[]): MenuItem[] {
+  return sortMenuItems(items).filter((item) => item.favorite);
+}
+
 /** 메뉴에 실제로 존재하는 카테고리를 표시 순서대로 반환 */
 export function orderedCategories(items: MenuItem[]): string[] {
   const seen: string[] = [];
@@ -72,11 +82,11 @@ export function orderedCategories(items: MenuItem[]): string[] {
 }
 
 export const FALLBACK_MENU: MenuItem[] = [
-  { id: "americano", name: "아메리카노", category: "커피", price: 3000, hasTemperature: true, description: null, soldOut: false, sortOrder: 10 },
-  { id: "cafe-latte", name: "카페라떼", category: "커피", price: 3500, hasTemperature: true, description: null, soldOut: false, sortOrder: 20 },
-  { id: "vanilla-latte", name: "바닐라라떼", category: "커피", price: 4000, hasTemperature: true, description: null, soldOut: false, sortOrder: 30 },
-  { id: "grapefruit-ade", name: "자몽에이드", category: "논커피", price: 4000, hasTemperature: false, description: null, soldOut: false, sortOrder: 10 },
-  { id: "green-tea-latte", name: "녹차라떼", category: "논커피", price: 4000, hasTemperature: true, description: null, soldOut: false, sortOrder: 20 },
-  { id: "basque-cheesecake", name: "바스크 치즈케이크", category: "디저트", price: 5000, hasTemperature: false, description: "진한 치즈 풍미의 수제 케이크", soldOut: false, sortOrder: 10 },
-  { id: "chocolate-cookie", name: "초코칩 쿠키", category: "디저트", price: 2500, hasTemperature: false, description: null, soldOut: false, sortOrder: 20 },
+  { id: "americano", name: "아메리카노", category: "커피", price: 3000, hasTemperature: true, description: null, soldOut: false, favorite: false, sortOrder: 10 },
+  { id: "cafe-latte", name: "카페라떼", category: "커피", price: 3500, hasTemperature: true, description: null, soldOut: false, favorite: false, sortOrder: 20 },
+  { id: "vanilla-latte", name: "바닐라라떼", category: "커피", price: 4000, hasTemperature: true, description: null, soldOut: false, favorite: false, sortOrder: 30 },
+  { id: "grapefruit-ade", name: "자몽에이드", category: "논커피", price: 4000, hasTemperature: false, description: null, soldOut: false, favorite: false, sortOrder: 10 },
+  { id: "green-tea-latte", name: "녹차라떼", category: "논커피", price: 4000, hasTemperature: true, description: null, soldOut: false, favorite: false, sortOrder: 20 },
+  { id: "basque-cheesecake", name: "바스크 치즈케이크", category: "디저트", price: 5000, hasTemperature: false, description: "진한 치즈 풍미의 수제 케이크", soldOut: false, favorite: false, sortOrder: 10 },
+  { id: "chocolate-cookie", name: "초코칩 쿠키", category: "디저트", price: 2500, hasTemperature: false, description: null, soldOut: false, favorite: false, sortOrder: 20 },
 ];

@@ -35,6 +35,25 @@ export default function MenuTab({
     }
   }
 
+  /** 즐겨찾기 토글 — 포스 첫 화면의 "⭐ 자주 쓰는" 칩에 모입니다 */
+  async function toggleFavorite(item: MenuItem) {
+    if (!supabase) return;
+    const { error: dbError } = await supabase
+      .from("menu_items")
+      .update({ is_favorite: !item.favorite })
+      .eq("id", item.id);
+    if (dbError) {
+      setError(
+        dbError.code === "PGRST204" || /is_favorite/.test(dbError.message)
+          ? "즐겨찾기 컬럼(is_favorite)이 아직 없습니다. Supabase SQL Editor에서 supabase/schema.sql을 다시 실행해 주세요."
+          : `변경 실패: ${dbError.message}`
+      );
+    } else {
+      setError(null);
+      onChanged();
+    }
+  }
+
   async function remove(item: MenuItem) {
     if (!supabase) return;
     if (!window.confirm(`'${item.name}' 메뉴를 삭제할까요?`)) return;
@@ -73,7 +92,7 @@ export default function MenuTab({
     <section>
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-gray-500">
-          총 {menu.length}개 메뉴 · 수정 사항은 주문 페이지에 바로 반영됩니다
+          총 {menu.length}개 메뉴 · ⭐를 누르면 포스 첫 화면에 모입니다
         </p>
         <button
           onClick={() => setEditing("new")}
@@ -122,6 +141,18 @@ export default function MenuTab({
               <span className="w-20 text-right font-bold text-gray-900">
                 {formatPrice(item.price)}
               </span>
+              <button
+                onClick={() => toggleFavorite(item)}
+                aria-label="즐겨찾기"
+                title="포스 첫 화면(⭐ 자주 쓰는)에 올리기"
+                className={`rounded-lg px-2.5 py-1.5 text-sm leading-none transition ${
+                  item.favorite
+                    ? "bg-amber-50 hover:bg-amber-100"
+                    : "bg-gray-100 opacity-40 hover:opacity-100"
+                }`}
+              >
+                {item.favorite ? "⭐" : "☆"}
+              </button>
               <button
                 onClick={() => toggleSoldOut(item)}
                 className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition ${

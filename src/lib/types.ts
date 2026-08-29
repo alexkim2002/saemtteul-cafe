@@ -28,6 +28,8 @@ export interface OrderItem {
   quantity: number;
   /** 1개 가격 (원) */
   unitPrice: number;
+  /** 텀블러(개인컵) 지참 — 이 줄에만 할인이 붙습니다 */
+  tumbler?: boolean;
 }
 
 /** Supabase orders 테이블 한 행 */
@@ -53,16 +55,23 @@ export function orderSubtotal(order: Pick<Order, "total" | "discount">): number 
   return order.total + (order.discount ?? 0);
 }
 
-/** 주문 항목 한 줄 표시용 텍스트 (예: "아메리카노 (ICE) x2") */
+/** 주문 항목 한 줄 표시용 텍스트 (예: "아메리카노 (ICE) x2 🥤") */
 export function formatOrderItem(item: OrderItem): string {
   const opts = [item.temperature, item.size === "Large" ? "Large" : null]
     .filter(Boolean)
     .join("/");
-  return `${item.name}${opts ? ` (${opts})` : ""} x${item.quantity}`;
+  return `${item.name}${opts ? ` (${opts})` : ""} x${item.quantity}${
+    item.tumbler ? " 🥤" : ""
+  }`;
 }
 
 export function formatPrice(price: number): string {
   return price.toLocaleString("ko-KR") + "원";
+}
+
+/** 텀블러를 지참한 잔 수 */
+export function tumblerCount(items: OrderItem[]): number {
+  return items.reduce((sum, i) => sum + (i.tumbler ? i.quantity : 0), 0);
 }
 
 /** 주문 항목 합계 (할인 전) */

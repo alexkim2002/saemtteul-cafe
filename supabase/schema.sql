@@ -79,8 +79,13 @@ create table if not exists public.menu_items (
   description text,
   has_temperature boolean not null default false,  -- HOT/ICE 선택 가능 여부
   sold_out boolean not null default false,
-  sort_order integer not null default 0            -- 같은 카테고리 안 표시 순서
+  sort_order integer not null default 0,           -- 같은 카테고리 안 표시 순서
+  is_favorite boolean not null default false       -- 포스 첫 화면(⭐ 자주 쓰는)에 올릴지
 );
+
+-- 즐겨찾기 컬럼 (예전에 만든 테이블이면 이 파일을 다시 Run 할 때 추가됩니다)
+alter table public.menu_items
+  add column if not exists is_favorite boolean not null default false;
 
 alter table public.menu_items enable row level security;
 

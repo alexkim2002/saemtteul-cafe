@@ -146,12 +146,12 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-5 pb-10">
-      <header className="mb-5">
+    <main className="mx-auto max-w-6xl px-3 py-4 pb-6 sm:px-4 sm:py-5">
+      <header className="mb-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-blue-500">✝️ 봉원교회 샘뜰 카페</p>
-            <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-gray-900">
+            <h1 className="mt-0.5 text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
               포스
             </h1>
           </div>
@@ -162,7 +162,7 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
             로그아웃
           </button>
         </div>
-        <nav className="mt-4 flex rounded-2xl bg-gray-200/60 p-1">
+        <nav className="mt-3 flex rounded-2xl bg-gray-200/60 p-1">
           {TABS.map(({ key, label }) => (
             <button
               key={key}
