@@ -15,12 +15,21 @@ import {
   tumblerCount,
 } from "@/lib/types";
 
-export default function OrdersTab({ refreshKey }: { refreshKey: number }) {
+export default function OrdersTab({
+  refreshKey,
+  dayKey,
+  onDayChange,
+}: {
+  refreshKey: number;
+  dayKey: string;
+  onDayChange: (dayKey: string) => void;
+}) {
   const todayKey = useMemo(() => dayKeyOf(new Date()), []);
-  const [dayKey, setDayKey] = useState(todayKey);
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSettlement, setShowSettlement] = useState(false);
+  // 주문이 있는 마지막 날짜 — 빈 날짜를 보고 있을 때 안내합니다
+  const [latestDay, setLatestDay] = useState<string | null>(null);
 
   const supabase = useMemo(() => getSupabase(), []);
 
@@ -63,6 +72,24 @@ export default function OrdersTab({ refreshKey }: { refreshKey: number }) {
       supabase.removeChannel(channel);
     };
   }, [supabase, fetchOrders, refreshKey]);
+
+  // 예전 주문이 어디까지 있는지 한 번 확인해 둡니다
+  useEffect(() => {
+    if (!supabase) return;
+    let cancelled = false;
+    supabase
+      .from("orders")
+      .select("created_at")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .then(({ data }) => {
+        if (cancelled || !data?.[0]) return;
+        setLatestDay(dayKeyOf(new Date(data[0].created_at as string)));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, refreshKey]);
 
   async function updateStatus(order: Order, status: OrderStatus) {
     if (!supabase) return;
@@ -113,29 +140,38 @@ export default function OrdersTab({ refreshKey }: { refreshKey: number }) {
       {/* 날짜 이동 */}
       <div className="mb-3 flex items-center justify-between gap-2 rounded-2xl bg-white px-3 py-2.5 shadow-sm">
         <button
-          onClick={() => setDayKey((d) => shiftDay(d, -1))}
+          onClick={() => onDayChange(shiftDay(dayKey, -1))}
           aria-label="이전 날"
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-gray-200"
         >
           ‹
         </button>
-        <div className="min-w-0 text-center">
+        {/* 날짜를 누르면 달력이 열립니다 (지난 날짜로 바로 이동) */}
+        <div className="relative min-w-0 text-center">
           <div className="truncate font-bold text-gray-900">{formatDayLabel(dayKey)}</div>
           <div className="text-xs text-gray-400">
-            {dayKey === todayKey ? "오늘 · 실시간 갱신" : dayKey}
+            {dayKey === todayKey ? "오늘 · 실시간 갱신" : `${dayKey} · 눌러서 날짜 선택`}
           </div>
+          <input
+            type="date"
+            value={dayKey}
+            max={todayKey}
+            onChange={(e) => e.target.value && onDayChange(e.target.value)}
+            aria-label="날짜 선택"
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          />
         </div>
         <div className="flex shrink-0 gap-1.5">
           {dayKey !== todayKey && (
             <button
-              onClick={() => setDayKey(todayKey)}
+              onClick={() => onDayChange(todayKey)}
               className="rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-600 transition hover:bg-blue-100"
             >
               오늘
             </button>
           )}
           <button
-            onClick={() => setDayKey((d) => shiftDay(d, 1))}
+            onClick={() => onDayChange(shiftDay(dayKey, 1))}
             aria-label="다음 날"
             disabled={dayKey >= todayKey}
             className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-gray-200 disabled:opacity-30"
@@ -181,7 +217,17 @@ export default function OrdersTab({ refreshKey }: { refreshKey: number }) {
       {orders === null ? (
         <p className="py-16 text-center text-gray-400">불러오는 중...</p>
       ) : rows.length === 0 ? (
-        <p className="py-16 text-center text-gray-400">이 날짜에는 주문이 없습니다.</p>
+        <div className="py-16 text-center">
+          <p className="text-gray-400">이 날짜에는 주문이 없습니다.</p>
+          {latestDay && latestDay !== dayKey && (
+            <button
+              onClick={() => onDayChange(latestDay)}
+              className="mt-3 rounded-xl bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-600 transition hover:bg-blue-100"
+            >
+              마지막 주문일({formatDayLabel(latestDay)})로 이동 →
+            </button>
+          )}
+        </div>
       ) : (
         <ul className="space-y-2.5">
           {rows.map(({ order, seq }) => (
@@ -412,6 +458,8 @@ function SettlementSheet({
           <p className="mt-4 text-xs text-gray-400">
             * 통장에는 손님이 직접 이체하므로 입금자명이 주문자 이름과 다를 수 있습니다.
             금액과 시각을 먼저 맞춰 보세요.
+            <br />* 포스를 쓰기 전(손님이 직접 주문하던 시절) 주문은 결제수단이 따로
+            기록되어 있지 않아 모두 계좌이체로 표시됩니다.
           </p>
         </div>
 

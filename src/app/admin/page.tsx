@@ -6,6 +6,7 @@ import OrdersTab from "@/components/admin/OrdersTab";
 import PosTab from "@/components/admin/PosTab";
 import SalesTab from "@/components/admin/SalesTab";
 import { MenuItem } from "@/data/menu";
+import { dayKeyOf } from "@/lib/date";
 import { fetchMenu } from "@/lib/menu";
 import { getSupabase } from "@/lib/supabase";
 
@@ -117,6 +118,8 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
   const [menuFromDb, setMenuFromDb] = useState(false);
   // POS에서 결제가 끝나면 올려서 주문내역/매출을 다시 불러오게 합니다
   const [refreshKey, setRefreshKey] = useState(0);
+  // 주문내역이 보고 있는 날짜 (매출 달력에서 넘어올 수 있게 셸이 들고 있습니다)
+  const [historyDay, setHistoryDay] = useState(() => dayKeyOf(new Date()));
 
   const supabase = useMemo(() => getSupabase(), []);
 
@@ -187,8 +190,22 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
           onOrderSaved={() => setRefreshKey((k) => k + 1)}
         />
       </div>
-      {tab === "orders" && <OrdersTab refreshKey={refreshKey} />}
-      {tab === "sales" && <SalesTab refreshKey={refreshKey} />}
+      {tab === "orders" && (
+        <OrdersTab
+          refreshKey={refreshKey}
+          dayKey={historyDay}
+          onDayChange={setHistoryDay}
+        />
+      )}
+      {tab === "sales" && (
+        <SalesTab
+          refreshKey={refreshKey}
+          onOpenDay={(day) => {
+            setHistoryDay(day);
+            setTab("orders");
+          }}
+        />
+      )}
       {tab === "menu" && (
         <MenuTab menu={menu} fromDb={menuFromDb} onChanged={refreshMenu} />
       )}

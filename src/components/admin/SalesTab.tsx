@@ -26,7 +26,14 @@ function formatCompactWon(amount: number): string {
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
-export default function SalesTab({ refreshKey }: { refreshKey: number }) {
+export default function SalesTab({
+  refreshKey,
+  onOpenDay,
+}: {
+  refreshKey: number;
+  /** 달력에서 고른 날짜의 주문내역으로 넘어갑니다 */
+  onOpenDay: (dayKey: string) => void;
+}) {
   const today = useMemo(() => new Date(), []);
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth()); // 0부터 시작
@@ -298,6 +305,13 @@ export default function SalesTab({ refreshKey }: { refreshKey: number }) {
                   );
                 })}
               </div>
+
+              <button
+                onClick={() => onOpenDay(selectedDay)}
+                className="mb-5 w-full rounded-2xl bg-white py-3 text-sm font-bold text-blue-600 shadow-sm transition hover:bg-blue-50"
+              >
+                이 날 주문내역 보기 →
+              </button>
 
               {dayDetail.menuRows.length === 0 ? (
                 <p className="py-8 text-center text-sm text-gray-400">
