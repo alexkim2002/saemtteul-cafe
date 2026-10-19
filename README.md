@@ -101,7 +101,22 @@ ADMIN_PASSWORD=abc123
 
 텀블러 할인 금액과 계좌이체 안내 문구는 `src/lib/config.ts` 한 곳에 모여 있습니다.
 
-## 7. DB 설정이 덜 끝났을 때
+## 7. 휴대폰에서 쓰기
+
+카운터에서 휴대폰으로 쓰는 것을 기준으로 맞춰 두었습니다.
+
+- **홈 화면에 추가**하면 주소창 없이 앱처럼 열립니다 (`manifest.ts`, `display: standalone`).
+  아이폰은 Safari 공유 → "홈 화면에 추가", 안드로이드는 Chrome 메뉴 → "앱 설치".
+- 누르는 것은 모두 **44px 이상**입니다.
+- 입력칸 글자를 16px로 고정해 iOS에서 **누를 때 화면이 확대되지 않습니다**.
+- `touch-action: manipulation`으로 더블탭 확대와 탭 지연을 없앴습니다.
+- 주문 받는 동안 **화면이 꺼지지 않습니다** (`useKeepAwake`, 지원 기기에 한함).
+- **인터넷이 끊기면** 화면 위에 바로 알리고, 결제 버튼을 눌러도 저장을 시도하지 않습니다.
+- 결제 버튼은 ref로 잠가 **연타해도 두 번 저장되지 않습니다**.
+- 화면이 깨져도 `admin/error.tsx`가 받아 "다시 시도"로 복구됩니다.
+- Realtime이 막혀도 오늘 주문은 20초 안에 갱신됩니다 (화면이 켜져 있을 때만).
+
+## 8. DB 설정이 덜 끝났을 때
 
 필요한 컬럼이 없으면 포스를 열 때 **화면 맨 위에 빨간 경고 배너**가 뜹니다.
 (2026년 8~10월에 `schema.sql`을 실행하지 않은 채로 7주간 운영되어
@@ -111,7 +126,7 @@ ADMIN_PASSWORD=abc123
 그 기간 데이터는 `supabase/recover-2026-10.sql`로 복구했습니다 — 메모에 남은
 `결제: 현금` / `결제: 계좌이체` 문구를 컬럼으로 되살리는 1회성 스크립트입니다.
 
-## 8. 나중에 전용 포스기로 옮긴다면
+## 9. 나중에 전용 포스기로 옮긴다면
 
 계산 규칙은 화면과 분리해 `src/lib/`에만 두었습니다. 다른 환경으로 옮길 때
 이 파일들만 가져가면 됩니다. 새 기능을 넣을 때도 계산은 먼저 `src/lib/`에
@@ -137,6 +152,9 @@ src/
     layout.tsx          # 공통 레이아웃/메타데이터
     globals.css         # 색 토큰(@theme) + 전역 스타일 (밝은 테마 고정)
     icon.png            # 파비콘 (로고의 해)
+    apple-icon.png      # iOS 홈 화면 아이콘
+    manifest.ts         # 홈 화면에 추가(PWA) 설정
+    admin/error.tsx     # 포스 화면 오류 안전망
   components/admin/
     PosTab.tsx          # 주문받기 (메뉴 버튼판 + 주문서 + 결제)
     OrdersTab.tsx       # 주문내역 (날짜별 목록/요약/삭제)
@@ -144,6 +162,9 @@ src/
     MenuTab.tsx         # 메뉴 관리
   data/
     menu.ts             # 메뉴 타입 + 예비(폴백) 메뉴
+  components/
+    useKeepAwake.ts     # 주문 받는 동안 화면 꺼짐 방지
+    useOnline.ts        # 인터넷 끊김 감지
   lib/                  # 화면과 무관한 계산 규칙 (전용 포스기로 옮길 때 이 폴더만)
     config.ts           # 할인 금액·계좌 정보
     date.ts             # 하루 단위 날짜 유틸
@@ -156,6 +177,7 @@ src/
     adminAuth.ts        # 관리자 세션 토큰 (서버 전용)
 public/
   logo.webp             # 로고 (로그인 화면·헤더)
+  icon-192.png / icon-512.png / icon-maskable-512.png   # 홈 화면 아이콘
 supabase/
   schema.sql            # DB 테이블/정책/시드 SQL (Supabase SQL Editor에서 실행)
   recover-2026-10.sql   # 밀린 마이그레이션 + 메모에서 결제수단 복구 (1회성)

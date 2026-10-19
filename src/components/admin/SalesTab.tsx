@@ -147,7 +147,7 @@ export default function SalesTab({
           <button
             onClick={() => moveMonth(-1)}
             aria-label="이전 달"
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-brown-soft text-ink-soft transition hover:bg-line"
+            className="flex h-11 w-11 items-center justify-center rounded-xl bg-brown-soft text-xl text-ink-soft transition hover:bg-line"
           >
             ‹
           </button>
@@ -168,7 +168,7 @@ export default function SalesTab({
           <button
             onClick={() => moveMonth(1)}
             aria-label="다음 달"
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-brown-soft text-ink-soft transition hover:bg-line"
+            className="flex h-11 w-11 items-center justify-center rounded-xl bg-brown-soft text-xl text-ink-soft transition hover:bg-line"
           >
             ›
           </button>
@@ -272,7 +272,7 @@ export default function SalesTab({
 
               <button
                 onClick={() => onOpenDay(selectedDay)}
-                className="mb-5 w-full rounded-2xl bg-paper py-3 text-sm font-bold text-forest shadow-sm transition hover:bg-forest-soft"
+                className="mb-5 h-12 w-full rounded-2xl bg-paper text-sm font-bold text-forest shadow-sm ring-1 ring-line transition hover:bg-forest-soft"
               >
                 이 날 주문내역 보기 →
               </button>

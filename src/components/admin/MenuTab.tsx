@@ -96,7 +96,7 @@ export default function MenuTab({
         </p>
         <button
           onClick={() => setEditing("new")}
-          className="shrink-0 whitespace-nowrap rounded-xl bg-forest px-4 py-2 text-sm font-bold text-white transition hover:bg-forest-deep"
+          className="h-11 shrink-0 whitespace-nowrap rounded-xl bg-forest px-4 text-sm font-bold text-white transition hover:bg-forest-deep"
         >
           + 메뉴 추가
         </button>
@@ -145,17 +145,17 @@ export default function MenuTab({
                 onClick={() => toggleFavorite(item)}
                 aria-label="즐겨찾기"
                 title="포스 첫 화면(⭐ 자주 쓰는)에 올리기"
-                className={`rounded-lg px-2.5 py-1.5 text-sm leading-none transition ${
+                className={`h-10 w-10 rounded-lg text-base leading-none transition ${
                   item.favorite
                     ? "bg-sun-soft hover:bg-sun/30"
-                    : "bg-brown-soft opacity-40 hover:opacity-100"
+                    : "bg-brown-soft opacity-50 hover:opacity-100"
                 }`}
               >
                 {item.favorite ? "⭐" : "☆"}
               </button>
               <button
                 onClick={() => toggleSoldOut(item)}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition ${
+                className={`h-10 rounded-lg px-3 text-xs font-bold transition ${
                   item.soldOut
                     ? "bg-clay-soft text-clay hover:bg-clay/15"
                     : "bg-brown-soft text-ink-soft hover:bg-line"
@@ -165,13 +165,13 @@ export default function MenuTab({
               </button>
               <button
                 onClick={() => setEditing(item)}
-                className="rounded-lg bg-brown-soft px-2.5 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-line"
+                className="h-10 rounded-lg bg-brown-soft px-3 text-xs font-semibold text-ink-soft transition hover:bg-line"
               >
                 수정
               </button>
               <button
                 onClick={() => remove(item)}
-                className="rounded-lg bg-clay-soft px-2.5 py-1.5 text-xs font-semibold text-clay transition hover:bg-clay/15"
+                className="h-10 rounded-lg bg-clay-soft px-3 text-xs font-semibold text-clay transition hover:bg-clay/15"
               >
                 삭제
               </button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { MenuItem, favoriteItems, orderedCategories } from "@/data/menu";
 import {
   ACCOUNT_HOLDER,
@@ -60,6 +60,9 @@ export default function PosTab({
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   // null이면 "장바구니가 비면 접고, 담기면 편다" 기본 동작
   const [manualOpen, setManualOpen] = useState<boolean | null>(null);
+  // setSaving은 다음 렌더에야 반영됩니다. 느린 폰에서 연타하면 두 건이
+  // 저장될 수 있어, 즉시 막히는 ref로 한 번 더 잠급니다.
+  const payingRef = useRef(false);
 
   const favorites = useMemo(() => favoriteItems(menu), [menu]);
   const tabs = useMemo(
@@ -137,38 +140,54 @@ export default function PosTab({
 
   /** 결제 = 매출 기록. 버튼 한 번으로 주문이 "완료" 상태로 저장됩니다. */
   async function pay(method: PaymentMethod) {
-    if (cart.length === 0 || saving) return;
+    if (cart.length === 0 || payingRef.current) return;
     const supabase = getSupabase();
     if (!supabase) {
       setError("Supabase 설정이 없습니다. .env.local을 확인해 주세요.");
       return;
     }
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setError("인터넷이 끊겨 있어 저장할 수 없습니다. 연결을 확인해 주세요.");
+      return;
+    }
 
+    payingRef.current = true;
     setError(null);
     setSaving(true);
-    const typed = customerName.trim();
-    const label = typed || (await nextOrderLabel(supabase));
-    const tumblers = tumblerCount(cart);
-    const result = await insertOrder(supabase, {
-      customerName: label,
-      items: cart,
-      total,
-      discount,
-      paymentMethod: method,
-      memo:
-        tumblers > 0
-          ? `텀블러 ${tumblers}잔 (−${formatPrice(discount)})`
-          : null,
-      status: "완료",
-    });
-    setSaving(false);
+
+    let result: { error?: string; legacySchema?: boolean };
+    try {
+      const typed = customerName.trim();
+      const label = typed || (await nextOrderLabel(supabase));
+      const tumblers = tumblerCount(cart);
+      result = await insertOrder(supabase, {
+        customerName: label,
+        items: cart,
+        total,
+        discount,
+        paymentMethod: method,
+        memo:
+          tumblers > 0 ? `텀블러 ${tumblers}잔 (−${formatPrice(discount)})` : null,
+        status: "완료",
+      });
+      if (!result.error) {
+        setReceipt({ label, method, items: cart, discount, total });
+      }
+    } catch (e) {
+      // 네트워크가 끊기면 supabase-js가 예외를 던지기도 합니다
+      result = { error: e instanceof Error ? e.message : "연결에 실패했습니다" };
+    } finally {
+      payingRef.current = false;
+      setSaving(false);
+    }
 
     if (result.error) {
-      setError(`주문 저장 실패: ${result.error}`);
+      setError(
+        `주문 저장 실패: ${result.error} — 주문서는 그대로 두었으니 다시 눌러 주세요.`
+      );
       return;
     }
     // 컬럼이 없어 메모로 우회 저장된 경우는 화면 상단 배너가 계속 알려줍니다
-    setReceipt({ label, method, items: cart, discount, total });
     clearCart();
     onOrderSaved();
   }
@@ -182,7 +201,7 @@ export default function PosTab({
             <button
               key={c}
               onClick={() => setTab(c)}
-              className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold transition ${
+              className={`h-11 shrink-0 rounded-full px-4 text-sm font-bold transition ${
                 activeTab === c
                   ? "bg-forest text-white shadow-sm"
                   : "bg-paper text-ink-soft ring-1 ring-line hover:bg-forest-soft"
@@ -216,7 +235,7 @@ export default function PosTab({
           {/* 시트 손잡이 (모바일에서 접었다 펴기) */}
           <button
             onClick={() => setManualOpen(!expanded)}
-            className="mb-2 flex w-full items-center justify-between lg:pointer-events-none"
+            className="mb-1 flex h-11 w-full items-center justify-between lg:pointer-events-none"
           >
             <span className="flex items-center gap-1.5 font-bold text-ink">
               주문서
@@ -241,64 +260,76 @@ export default function PosTab({
               </p>
             ) : (
               <>
-                <ul className="mb-2 max-h-[30vh] space-y-1.5 overflow-y-auto lg:max-h-[42vh]">
+                <ul className="mb-2 max-h-[34vh] space-y-1.5 overflow-y-auto lg:max-h-[42vh]">
                   {cart.map((line) => {
                     const key = cartLineKey(line);
                     const lineTotal = line.unitPrice * line.quantity - lineDiscount(line);
                     return (
-                      <li key={key} className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => toggleTumbler(key)}
-                          aria-label="텀블러 지참"
-                          title={`텀블러 지참 (잔당 −${formatPrice(TUMBLER_DISCOUNT)})`}
-                          className={`h-10 w-10 shrink-0 rounded-xl border-2 text-lg leading-none transition ${
-                            line.tumbler
-                              ? "border-forest bg-forest"
-                              : "border-forest-mid bg-paper hover:border-forest hover:bg-forest-soft"
-                          }`}
-                        >
-                          🥤
-                        </button>
-                        <span className="min-w-0 flex-1 truncate text-sm">
-                          <span className="font-semibold text-ink">{line.name}</span>
-                          {line.temperature && (
-                            <span
-                              className={`ml-1 text-xs font-bold ${
-                                line.temperature === "HOT"
-                                  ? "text-sun-deep"
-                                  : "text-ice"
-                              }`}
-                            >
-                              {line.temperature}
+                      // 한 줄에 다 넣으면 휴대폰에서 이름이 잘리고 버튼이 작아집니다.
+                      // 위: 이름·금액 / 아래: 44px 버튼들 — 두 줄로 나눕니다.
+                      <li key={key} className="rounded-xl bg-cream px-2.5 py-2">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="min-w-0 flex-1 truncate text-sm">
+                            <span className="font-semibold text-ink">{line.name}</span>
+                            {line.temperature && (
+                              <span
+                                className={`ml-1 text-xs font-bold ${
+                                  line.temperature === "HOT" ? "text-sun-deep" : "text-ice"
+                                }`}
+                              >
+                                {line.temperature}
+                              </span>
+                            )}
+                          </span>
+                          <span className="shrink-0 text-sm font-bold text-ink">
+                            {formatPrice(lineTotal)}
+                          </span>
+                        </div>
+
+                        <div className="mt-1.5 flex items-center justify-between">
+                          <button
+                            onClick={() => toggleTumbler(key)}
+                            aria-label="텀블러 지참"
+                            aria-pressed={line.tumbler ?? false}
+                            title={`텀블러 지참 (잔당 −${formatPrice(TUMBLER_DISCOUNT)})`}
+                            className={`flex h-11 items-center gap-1 rounded-xl border-2 px-2.5 text-sm font-bold transition ${
+                              line.tumbler
+                                ? "border-forest bg-forest text-white"
+                                : "border-forest-mid bg-paper text-forest hover:bg-forest-soft"
+                            }`}
+                          >
+                            🥤
+                            <span className="text-xs">
+                              {line.tumbler ? "할인 중" : "텀블러"}
                             </span>
-                          )}
-                        </span>
-                        <button
-                          onClick={() => changeQuantity(key, -1)}
-                          aria-label="수량 감소"
-                          className="h-9 w-9 shrink-0 rounded-xl bg-brown-soft text-lg font-semibold leading-none text-ink-soft transition hover:bg-line"
-                        >
-                          −
-                        </button>
-                        <span className="w-5 shrink-0 text-center font-bold text-ink">
-                          {line.quantity}
-                        </span>
-                        <button
-                          onClick={() => changeQuantity(key, 1)}
-                          aria-label="수량 증가"
-                          className="h-9 w-9 shrink-0 rounded-xl bg-brown-soft text-lg font-semibold leading-none text-ink-soft transition hover:bg-line"
-                        >
-                          +
-                        </button>
-                        <span className="w-[4.5rem] shrink-0 text-right text-sm font-bold text-ink">
-                          {formatPrice(lineTotal)}
-                        </span>
+                          </button>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => changeQuantity(key, -1)}
+                              aria-label="수량 감소"
+                              className="h-11 w-11 rounded-xl bg-brown-soft text-xl font-semibold leading-none text-ink-soft transition hover:bg-line"
+                            >
+                              −
+                            </button>
+                            <span className="w-7 text-center text-base font-bold text-ink">
+                              {line.quantity}
+                            </span>
+                            <button
+                              onClick={() => changeQuantity(key, 1)}
+                              aria-label="수량 증가"
+                              className="h-11 w-11 rounded-xl bg-brown-soft text-xl font-semibold leading-none text-ink-soft transition hover:bg-line"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
                       </li>
                     );
                   })}
                 </ul>
                 <p className="mb-2 rounded-xl bg-forest-soft px-3 py-2 text-xs font-semibold text-forest-deep">
-                  텀블러 가져온 손님이면 왼쪽 🥤를 눌러주세요 — 그 음료만{" "}
+                  텀블러 가져온 음료는 🥤를 눌러주세요 — 그 음료만{" "}
                   {formatPrice(TUMBLER_DISCOUNT)} 할인됩니다.
                 </p>
               </>
@@ -309,12 +340,12 @@ export default function PosTab({
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 placeholder="이름 (선택 · 비우면 번호로 저장)"
-                className="min-w-0 flex-1 rounded-xl bg-brown-soft px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:bg-paper focus:outline-none focus:ring-2 focus:ring-forest"
+                className="h-11 min-w-0 flex-1 rounded-xl bg-brown-soft px-3.5 text-sm text-ink placeholder:text-ink-faint focus:bg-paper focus:outline-none focus:ring-2 focus:ring-forest"
               />
               {cart.length > 0 && (
                 <button
                   onClick={clearCart}
-                  className="shrink-0 rounded-xl bg-brown-soft px-3 text-xs font-semibold text-ink-soft transition hover:bg-clay-soft hover:text-clay"
+                  className="h-11 shrink-0 rounded-xl bg-brown-soft px-3 text-xs font-semibold text-ink-soft transition hover:bg-clay-soft hover:text-clay"
                 >
                   비우기
                 </button>
@@ -354,19 +385,16 @@ export default function PosTab({
               disabled={saving || cart.length === 0}
               className="rounded-2xl bg-forest py-3.5 font-bold text-white transition hover:bg-forest-deep active:scale-[0.98] disabled:bg-line disabled:text-ink-faint"
             >
-              계좌이체
+              {saving ? "저장 중..." : "계좌이체"}
             </button>
             <button
               onClick={() => pay("현금")}
               disabled={saving || cart.length === 0}
               className="rounded-2xl bg-brown py-3.5 font-bold text-white transition hover:bg-brown-deep active:scale-[0.98] disabled:bg-line disabled:text-ink-faint"
             >
-              현금
+              {saving ? "저장 중..." : "현금"}
             </button>
           </div>
-          {saving && (
-            <p className="mt-1.5 text-center text-xs text-ink-faint">저장 중...</p>
-          )}
         </div>
       </aside>
 
@@ -387,7 +415,7 @@ function MenuTile({
 }) {
   // 세 종류(품절/단일/온도선택) 모두 같은 높이·같은 자리에 이름·가격이 오도록 맞춥니다
   const tile =
-    "flex h-[6.75rem] select-none flex-col justify-between rounded-2xl bg-paper p-3 shadow-sm ring-1 ring-line";
+    "flex h-[7.25rem] select-none flex-col justify-between rounded-2xl bg-paper p-3 shadow-sm ring-1 ring-line";
 
   function header(muted = false) {
     return (
@@ -414,7 +442,7 @@ function MenuTile({
     return (
       <div className={`${tile} opacity-70`}>
         {header(true)}
-        <div className="rounded-xl bg-clay-soft py-2.5 text-center text-sm font-bold text-clay">
+        <div className="flex h-11 items-center justify-center rounded-xl bg-clay-soft text-sm font-bold text-clay">
           품절
         </div>
       </div>
@@ -428,7 +456,7 @@ function MenuTile({
         className={`${tile} text-left transition hover:bg-forest-soft active:scale-[0.97]`}
       >
         {header()}
-        <span className="rounded-xl bg-forest-soft py-2.5 text-center text-sm font-bold text-forest">
+        <span className="flex h-11 items-center justify-center rounded-xl bg-forest-soft text-sm font-bold text-forest">
           담기
         </span>
       </button>
@@ -441,13 +469,13 @@ function MenuTile({
       <div className="grid grid-cols-2 gap-1.5">
         <button
           onClick={() => onAdd(item, "HOT")}
-          className="rounded-xl bg-sun-soft py-2.5 text-sm font-bold text-sun-deep transition hover:bg-sun/30 active:scale-95"
+          className="h-11 rounded-xl bg-sun-soft text-sm font-bold text-sun-deep transition hover:bg-sun/30 active:scale-95"
         >
           HOT
         </button>
         <button
           onClick={() => onAdd(item, "ICE")}
-          className="rounded-xl bg-ice-soft py-2.5 text-sm font-bold text-ice transition hover:bg-ice/20 active:scale-95"
+          className="h-11 rounded-xl bg-ice-soft text-sm font-bold text-ice transition hover:bg-ice/20 active:scale-95"
         >
           ICE
         </button>

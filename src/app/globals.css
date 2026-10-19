@@ -64,3 +64,31 @@ body {
     "Segoe UI",
     sans-serif;
 }
+
+/* ============================================================
+   휴대폰에서 쓰기 좋게
+   ============================================================ */
+
+/* 탭 반응 지연(300ms)과 더블탭 확대를 없앱니다 */
+button,
+a,
+label,
+select,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+/* iOS Safari는 글자가 16px보다 작은 입력칸을 누르면 화면을 확대해 버립니다.
+   포스에서 이름을 칠 때마다 화면이 튀면 쓰기 어려워서 16px로 고정합니다. */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+/* 홈 화면에 추가해 앱처럼 열었을 때 상단 노치만큼 띄웁니다 */
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
+}

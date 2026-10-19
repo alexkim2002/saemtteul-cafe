@@ -10,41 +10,52 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
 
-/** 포스가 동작하는 데 필요한 컬럼 목록 */
-const REQUIRED_COLUMNS: { table: string; column: string; note: string }[] = [
-  { table: "orders", column: "payment_method", note: "결제수단(계좌이체/현금)" },
-  { table: "orders", column: "discount", note: "텀블러 할인 금액" },
-  { table: "menu_items", column: "is_favorite", note: "⭐ 즐겨찾기" },
-];
-
 export interface MissingColumn {
   table: string;
   column: string;
   note: string;
 }
 
-function isMissingColumnError(code: string | undefined, message: string, column: string) {
-  return code === "PGRST204" || code === "42703" || message.includes(column);
+/** 포스가 동작하는 데 필요한 컬럼 — 테이블별로 묶어 둡니다 */
+const REQUIRED: { table: string; columns: { column: string; note: string }[] }[] = [
+  {
+    table: "orders",
+    columns: [
+      { column: "payment_method", note: "결제수단(계좌이체/현금)" },
+      { column: "discount", note: "텀블러 할인 금액" },
+    ],
+  },
+  {
+    table: "menu_items",
+    columns: [{ column: "is_favorite", note: "⭐ 즐겨찾기" }],
+  },
+];
+
+function isMissingColumnError(code: string | undefined, message: string) {
+  return code === "PGRST204" || code === "42703" || /column .* does not exist/.test(message);
 }
 
 /**
  * 없는 컬럼 목록을 돌려줍니다. 빈 배열이면 정상입니다.
- * 조회에 실패(네트워크 등)하면 섣불리 경고하지 않도록 빈 배열을 반환합니다.
+ *
+ * 테이블당 딱 한 번만 조회합니다. 한 테이블에서 하나라도 빠지면 그 테이블의
+ * 컬럼을 모두 "없음"으로 봅니다 — 어차피 복구 SQL 한 번으로 같이 채워지고,
+ * 컬럼을 하나씩 찾겠다고 실패하는 요청을 더 날리면 콘솔만 지저분해집니다.
+ *
+ * 조회 실패가 네트워크 문제일 수도 있으므로, 컬럼 없음 오류일 때만 경고합니다.
  */
 export async function findMissingColumns(
   supabase: SupabaseClient
 ): Promise<MissingColumn[]> {
-  const results = await Promise.all(
-    REQUIRED_COLUMNS.map(async (required) => {
+  const perTable = await Promise.all(
+    REQUIRED.map(async ({ table, columns }) => {
       const { error } = await supabase
-        .from(required.table)
-        .select(required.column)
+        .from(table)
+        .select(columns.map((c) => c.column).join(","))
         .limit(1);
-      if (!error) return null;
-      return isMissingColumnError(error.code, error.message, required.column)
-        ? required
-        : null;
+      if (!error || !isMissingColumnError(error.code, error.message)) return [];
+      return columns.map((c) => ({ table, column: c.column, note: c.note }));
     })
   );
-  return results.filter((r): r is MissingColumn => r !== null);
+  return perTable.flat();
 }

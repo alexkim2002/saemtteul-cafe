@@ -72,6 +72,15 @@ export default function OrdersTab({
     };
   }, [supabase, fetchOrders, refreshKey]);
 
+  // Realtime이 끊기거나 막혀 있어도 오늘 주문은 늦어도 20초 안에 반영되게 합니다
+  useEffect(() => {
+    if (!supabase || dayKey !== todayKey) return;
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") fetchOrders();
+    }, 20000);
+    return () => clearInterval(timer);
+  }, [supabase, dayKey, todayKey, fetchOrders]);
+
   // 예전 주문이 어디까지 있는지 한 번 확인해 둡니다
   useEffect(() => {
     if (!supabase) return;
@@ -164,7 +173,7 @@ export default function OrdersTab({
         <button
           onClick={() => onDayChange(shiftDay(dayKey, -1))}
           aria-label="이전 날"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brown-soft text-ink-soft transition hover:bg-line"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brown-soft text-xl text-ink-soft transition hover:bg-line"
         >
           ‹
         </button>
@@ -187,7 +196,7 @@ export default function OrdersTab({
           {dayKey !== todayKey && (
             <button
               onClick={() => onDayChange(todayKey)}
-              className="rounded-xl bg-forest-soft px-3 py-2 text-xs font-bold text-forest transition hover:bg-forest-soft"
+              className="h-11 rounded-xl bg-forest-soft px-3 text-xs font-bold text-forest transition hover:bg-line"
             >
               오늘
             </button>
@@ -196,7 +205,7 @@ export default function OrdersTab({
             onClick={() => onDayChange(shiftDay(dayKey, 1))}
             aria-label="다음 날"
             disabled={dayKey >= todayKey}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-brown-soft text-ink-soft transition hover:bg-line disabled:opacity-30"
+            className="flex h-11 w-11 items-center justify-center rounded-xl bg-brown-soft text-xl text-ink-soft transition hover:bg-line disabled:opacity-30"
           >
             ›
           </button>
@@ -257,7 +266,7 @@ export default function OrdersTab({
           {latestDay && latestDay !== dayKey && (
             <button
               onClick={() => onDayChange(latestDay)}
-              className="mt-3 rounded-xl bg-forest-soft px-4 py-2.5 text-sm font-bold text-forest transition hover:bg-forest-soft"
+              className="mt-3 h-12 rounded-xl bg-forest-soft px-4 text-sm font-bold text-forest transition hover:bg-line"
             >
               마지막 주문일({formatDayLabel(latestDay)})로 이동 →
             </button>
@@ -381,13 +390,13 @@ function OrderRow({
               </span>
               <button
                 onClick={() => onDelete(order)}
-                className="rounded-xl bg-clay px-3 py-2 text-sm font-bold text-white transition hover:bg-clay/90"
+                className="h-11 rounded-xl bg-clay px-3.5 text-sm font-bold text-white transition hover:bg-clay/90"
               >
                 정말 삭제
               </button>
               <button
                 onClick={() => setConfirmingDelete(false)}
-                className="rounded-xl bg-brown-soft px-3 py-2 text-sm font-semibold text-ink-soft transition hover:bg-line"
+                className="h-11 rounded-xl bg-brown-soft px-3.5 text-sm font-semibold text-ink-soft transition hover:bg-line"
               >
                 취소
               </button>
@@ -396,7 +405,7 @@ function OrderRow({
             <>
               <button
                 onClick={() => setConfirmingDelete(true)}
-                className="rounded-xl bg-clay-soft px-3 py-2 text-sm font-semibold text-clay transition hover:bg-clay/15"
+                className="h-11 rounded-xl bg-clay-soft px-3.5 text-sm font-semibold text-clay transition hover:bg-clay/15"
               >
                 삭제
               </button>
@@ -404,7 +413,7 @@ function OrderRow({
                 onClick={() =>
                   onUpdateStatus(order, order.status === "완료" ? "대기" : "완료")
                 }
-                className="rounded-xl bg-brown-soft px-3 py-2 text-sm font-semibold text-ink-soft transition hover:bg-line"
+                className="h-11 rounded-xl bg-brown-soft px-3.5 text-sm font-semibold text-ink-soft transition hover:bg-line"
               >
                 {order.status === "완료" ? "대기로" : "완료 처리 ✓"}
               </button>

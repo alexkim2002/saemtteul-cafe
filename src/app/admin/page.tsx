@@ -11,6 +11,8 @@ import { dayKeyOf } from "@/lib/date";
 import { fetchMenu } from "@/lib/menu";
 import { MissingColumn, findMissingColumns } from "@/lib/schema";
 import { getSupabase } from "@/lib/supabase";
+import { useKeepAwake } from "@/components/useKeepAwake";
+import { useOnline } from "@/components/useOnline";
 
 type AdminTab = "pos" | "orders" | "sales" | "menu";
 
@@ -88,6 +90,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         width={900}
         height={472}
         priority
+        sizes="256px"
         className="mx-auto mb-1 w-full max-w-[16rem]"
       />
       <p className="mb-7 text-center text-xs font-semibold tracking-widest text-brown">
@@ -137,6 +140,10 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
   // DB에 없는 컬럼 (있으면 상단에 계속 경고를 띄웁니다)
   const [missingColumns, setMissingColumns] = useState<MissingColumn[]>([]);
 
+  // 주문 받는 동안 화면이 꺼지지 않게
+  useKeepAwake(true);
+  const online = useOnline();
+
   const supabase = useMemo(() => getSupabase(), []);
 
   const refreshMenu = useCallback(async () => {
@@ -178,6 +185,14 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
 
   return (
     <main className="mx-auto max-w-6xl px-3 py-4 pb-6 sm:px-4 sm:py-5">
+      {!online && (
+        <div className="mb-3 rounded-2xl border border-clay/40 bg-clay-soft px-4 py-3">
+          <p className="font-bold text-clay">📵 인터넷이 끊겼습니다</p>
+          <p className="mt-1 text-sm text-clay">
+            지금은 주문이 저장되지 않습니다. 연결이 돌아온 뒤 결제를 눌러 주세요.
+          </p>
+        </div>
+      )}
       {missingColumns.length > 0 && <SchemaWarning missing={missingColumns} />}
 
       <header className="mb-4">
@@ -189,6 +204,7 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
               width={900}
               height={472}
               priority
+              sizes="(min-width: 640px) 128px, 100px"
               className="h-11 w-auto sm:h-14"
             />
             <span className="shrink-0 rounded-full bg-forest-soft px-2.5 py-1 text-xs font-bold text-forest">
@@ -197,7 +213,7 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
           </div>
           <button
             onClick={onLogout}
-            className="shrink-0 rounded-xl bg-brown-soft px-3.5 py-2 text-xs font-semibold text-ink-soft transition hover:bg-line"
+            className="h-11 shrink-0 rounded-xl bg-brown-soft px-3.5 text-xs font-semibold text-ink-soft transition hover:bg-line"
           >
             로그아웃
           </button>
@@ -207,7 +223,7 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition ${
+              className={`h-11 flex-1 rounded-xl text-sm font-bold transition ${
                 tab === key
                   ? "bg-paper text-forest shadow-sm"
                   : "text-ink-soft hover:text-ink"
