@@ -2,14 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { dayKeyOf } from "@/lib/date";
+import { menuBreakdown, methodAgg, summarizeOrders } from "@/lib/sales";
 import { getSupabase } from "@/lib/supabase";
-import {
-  Order,
-  PAYMENT_METHODS,
-  PaymentMethod,
-  formatPrice,
-  paymentMethodOf,
-} from "@/lib/types";
+import { Order, PAYMENT_METHODS, formatPrice } from "@/lib/types";
 
 /** 달력 칸에 들어가는 짧은 금액 표기 (예: 12,500 → "1.3만", 3,000 → "3천") */
 function formatCompactWon(amount: number): string {
@@ -96,46 +91,15 @@ export default function SalesTab({
   const monthRevenue = (orders ?? []).reduce((sum, o) => sum + o.total, 0);
   const monthCount = orders?.length ?? 0;
 
-  // 선택한 날짜의 상세 집계
+  // 선택한 날짜의 상세 집계 (계산은 lib/sales.ts에 있습니다)
   const dayDetail = useMemo(() => {
     if (!orders || !selectedDay) return null;
     const dayOrders = orders.filter(
       (o) => dayKeyOf(new Date(o.created_at)) === selectedDay
     );
-    const revenue = dayOrders.reduce((sum, o) => sum + o.total, 0);
-    const count = dayOrders.length;
-
-    // 결제수단별 집계
-    const byMethod = new Map<PaymentMethod, { revenue: number; count: number }>();
-    for (const order of dayOrders) {
-      const method = paymentMethodOf(order);
-      const agg = byMethod.get(method) ?? { revenue: 0, count: 0 };
-      agg.revenue += order.total;
-      agg.count += 1;
-      byMethod.set(method, agg);
-    }
-
-    // 메뉴별 판매 집계 (jsonb items 기준)
-    const byMenu = new Map<string, { quantity: number; revenue: number }>();
-    for (const order of dayOrders) {
-      for (const item of order.items ?? []) {
-        const agg = byMenu.get(item.name) ?? { quantity: 0, revenue: 0 };
-        agg.quantity += item.quantity;
-        agg.revenue += item.unitPrice * item.quantity;
-        byMenu.set(item.name, agg);
-      }
-    }
-    const menuRows = [...byMenu.entries()]
-      .map(([name, agg]) => ({ name, ...agg }))
-      .sort((a, b) => b.revenue - a.revenue);
-
     return {
-      revenue,
-      count,
-      average: count > 0 ? Math.round(revenue / count) : 0,
-      discount: dayOrders.reduce((sum, o) => sum + (o.discount ?? 0), 0),
-      byMethod,
-      menuRows,
+      summary: summarizeOrders(dayOrders),
+      menuRows: menuBreakdown(dayOrders),
     };
   }, [orders, selectedDay]);
 
@@ -286,21 +250,21 @@ export default function SalesTab({
               </h2>
 
               <div className="mb-3 grid grid-cols-3 gap-3">
-                <StatCard label="총 매출" value={formatPrice(dayDetail.revenue)} />
-                <StatCard label="주문 수" value={`${dayDetail.count}건`} />
-                <StatCard label="평균 주문" value={formatPrice(dayDetail.average)} />
+                <StatCard label="총 매출" value={formatPrice(dayDetail.summary.revenue)} />
+                <StatCard label="주문 수" value={`${dayDetail.summary.count}건`} />
+                <StatCard label="평균 주문" value={formatPrice(dayDetail.summary.average)} />
               </div>
 
               {/* 결제수단별 */}
               <div className="mb-5 grid grid-cols-2 gap-3">
                 {PAYMENT_METHODS.map((m) => {
-                  const agg = dayDetail.byMethod.get(m);
+                  const agg = methodAgg(dayDetail.summary, m);
                   return (
                     <StatCard
                       key={m}
                       label={m}
-                      value={formatPrice(agg?.revenue ?? 0)}
-                      sub={`${agg?.count ?? 0}건`}
+                      value={formatPrice(agg.revenue)}
+                      sub={`${agg.count}건`}
                     />
                   );
                 })}
@@ -354,8 +318,12 @@ export default function SalesTab({
           <p className="mt-3 px-1 text-xs text-gray-400">
             * 총 매출은 할인까지 반영된 실제 받은 금액입니다. 메뉴별 매출은 할인 전
             정가 기준이라 합계가 조금 클 수 있습니다.
-            {dayDetail && dayDetail.discount > 0 && (
-              <> (이 날 할인 합계 {formatPrice(dayDetail.discount)})</>
+            {dayDetail && dayDetail.summary.discount > 0 && (
+              <>
+                {" "}
+                (이 날 텀블러 {dayDetail.summary.tumblers}잔 · 할인 합계{" "}
+                {formatPrice(dayDetail.summary.discount)})
+              </>
             )}
           </p>
         </div>

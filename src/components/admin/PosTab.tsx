@@ -57,7 +57,6 @@ export default function PosTab({
   const [customerName, setCustomerName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   // null이면 "장바구니가 비면 접고, 담기면 편다" 기본 동작
   const [manualOpen, setManualOpen] = useState<boolean | null>(null);
@@ -168,11 +167,7 @@ export default function PosTab({
       setError(`주문 저장 실패: ${result.error}`);
       return;
     }
-    setNotice(
-      result.legacySchema
-        ? "결제수단/할인 컬럼이 아직 없어 메모에만 기록했습니다. Supabase SQL Editor에서 supabase/schema.sql을 다시 실행해 주세요."
-        : null
-    );
+    // 컬럼이 없어 메모로 우회 저장된 경우는 화면 상단 배너가 계속 알려줍니다
     setReceipt({ label, method, items: cart, discount, total });
     clearCart();
     onOrderSaved();
@@ -256,10 +251,10 @@ export default function PosTab({
                           onClick={() => toggleTumbler(key)}
                           aria-label="텀블러 지참"
                           title={`텀블러 지참 (잔당 −${formatPrice(TUMBLER_DISCOUNT)})`}
-                          className={`h-9 w-9 shrink-0 rounded-xl text-base leading-none transition ${
+                          className={`h-10 w-10 shrink-0 rounded-xl border-2 text-lg leading-none transition ${
                             line.tumbler
-                              ? "bg-blue-500 text-white"
-                              : "bg-gray-100 opacity-50 grayscale hover:opacity-100"
+                              ? "border-blue-500 bg-blue-500"
+                              : "border-blue-200 bg-white hover:border-blue-400 hover:bg-blue-50"
                           }`}
                         >
                           🥤
@@ -307,8 +302,9 @@ export default function PosTab({
                     );
                   })}
                 </ul>
-                <p className="mb-2 text-xs text-gray-400">
-                  🥤를 누르면 그 음료만 {formatPrice(TUMBLER_DISCOUNT)} 할인됩니다.
+                <p className="mb-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
+                  텀블러 가져온 손님이면 왼쪽 🥤를 눌러주세요 — 그 음료만{" "}
+                  {formatPrice(TUMBLER_DISCOUNT)} 할인됩니다.
                 </p>
               </>
             )}
@@ -352,11 +348,6 @@ export default function PosTab({
             {error && (
               <p className="mb-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">
                 {error}
-              </p>
-            )}
-            {notice && (
-              <p className="mb-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                {notice}
               </p>
             )}
           </div>

@@ -2,17 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { dayKeyOf, dayRange, formatDayLabel, formatTime, shiftDay } from "@/lib/date";
+import { methodAgg, summarizeOrders, summaryText } from "@/lib/sales";
 import { getSupabase } from "@/lib/supabase";
 import {
   Order,
   OrderStatus,
   PAYMENT_METHODS,
-  PaymentMethod,
   formatOrderItem,
   formatPrice,
   orderSubtotal,
   paymentMethodOf,
-  tumblerCount,
 } from "@/lib/types";
 
 export default function OrdersTab({
@@ -27,7 +26,7 @@ export default function OrdersTab({
   const todayKey = useMemo(() => dayKeyOf(new Date()), []);
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showSettlement, setShowSettlement] = useState(false);
+  const [copied, setCopied] = useState(false);
   // 주문이 있는 마지막 날짜 — 빈 날짜를 보고 있을 때 안내합니다
   const [latestDay, setLatestDay] = useState<string | null>(null);
 
@@ -127,7 +126,30 @@ export default function OrdersTab({
     }
   }
 
-  const summary = useMemo(() => summarize(orders ?? []), [orders]);
+  const summary = useMemo(() => summarizeOrders(orders ?? []), [orders]);
+
+  /** 장부에 옮겨 적기 쉽게 그날 매출 요약을 텍스트로 복사 */
+  async function copySummary() {
+    const text = summaryText(formatDayLabel(dayKey), summary);
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // 복사가 막힌 환경에서는 화면의 숫자를 보고 옮겨 적으면 됩니다
+    }
+  }
 
   // 최신 주문이 위로. 번호는 그날 몇 번째 주문인지 기준입니다.
   const rows = useMemo(
@@ -181,30 +203,43 @@ export default function OrdersTab({
         </div>
       </div>
 
-      {/* 그날 요약 */}
-      <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {/* 그날 매출 요약 */}
+      <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <SummaryCard label="주문" value={`${summary.count}건`} />
         <SummaryCard label="매출" value={formatPrice(summary.revenue)} accent />
-        {PAYMENT_METHODS.map((m) => (
-          <SummaryCard
-            key={m}
-            label={m}
-            value={formatPrice(summary.byMethod.get(m)?.revenue ?? 0)}
-          />
-        ))}
+        {PAYMENT_METHODS.map((m) => {
+          const agg = methodAgg(summary, m);
+          return (
+            <SummaryCard
+              key={m}
+              label={m}
+              value={formatPrice(agg.revenue)}
+              sub={`${agg.count}건`}
+            />
+          );
+        })}
       </div>
 
+      {summary.discount > 0 && (
+        <p className="mb-2 px-1 text-xs text-gray-500">
+          🥤 텀블러 {summary.tumblers}잔 · 할인 −{formatPrice(summary.discount)} (할인 전{" "}
+          {formatPrice(summary.revenue + summary.discount)})
+        </p>
+      )}
+
       <button
-        onClick={() => setShowSettlement(true)}
-        disabled={!orders}
-        className="mb-4 w-full rounded-2xl bg-gray-900 py-3 text-sm font-bold text-white transition hover:bg-gray-800 active:scale-[0.99] disabled:opacity-40"
+        onClick={copySummary}
+        disabled={!orders || summary.count === 0}
+        className={`mb-4 w-full rounded-2xl py-3 text-sm font-bold text-white transition active:scale-[0.99] disabled:bg-gray-200 disabled:text-gray-400 ${
+          copied ? "bg-green-500" : "bg-gray-900 hover:bg-gray-800"
+        }`}
       >
-        🧾 정산 보기 (통장 대조용)
+        {copied ? "복사했습니다 ✓" : "📋 이 날 매출 요약 복사"}
       </button>
 
       {summary.pending > 0 && (
         <p className="mb-3 rounded-xl bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700">
-          아직 만들지 않은 주문 {summary.pending}건이 있습니다.
+          아직 완료 처리하지 않은 주문 {summary.pending}건이 있습니다.
         </p>
       )}
 
@@ -243,55 +278,22 @@ export default function OrdersTab({
       )}
 
       <p className="mt-4 px-1 text-xs text-gray-400">
-        * 매출은 할인까지 반영된 실제 받은 금액 기준입니다.
-        {summary.discount > 0 && ` (이 날 할인 합계 ${formatPrice(summary.discount)})`}
+        * 매출은 할인까지 반영된 실제 받은 금액 기준이며, 대기/완료 상태와 무관하게
+        모두 포함합니다.
       </p>
-
-      {showSettlement && orders && (
-        <SettlementSheet
-          dayKey={dayKey}
-          orders={orders}
-          onClose={() => setShowSettlement(false)}
-        />
-      )}
     </section>
   );
-}
-
-// ------------------------------------------------------------
-// 집계
-// ------------------------------------------------------------
-interface MethodAgg {
-  revenue: number;
-  count: number;
-}
-
-function summarize(list: Order[]) {
-  const byMethod = new Map<PaymentMethod, MethodAgg>();
-  for (const o of list) {
-    const method = paymentMethodOf(o);
-    const agg = byMethod.get(method) ?? { revenue: 0, count: 0 };
-    agg.revenue += o.total;
-    agg.count += 1;
-    byMethod.set(method, agg);
-  }
-  return {
-    count: list.length,
-    revenue: list.reduce((sum, o) => sum + o.total, 0),
-    discount: list.reduce((sum, o) => sum + (o.discount ?? 0), 0),
-    tumblers: list.reduce((sum, o) => sum + tumblerCount(o.items ?? []), 0),
-    byMethod,
-    pending: list.filter((o) => o.status === "대기").length,
-  };
 }
 
 function SummaryCard({
   label,
   value,
+  sub,
   accent,
 }: {
   label: string;
   value: string;
+  sub?: string;
   accent?: boolean;
 }) {
   return (
@@ -302,243 +304,7 @@ function SummaryCard({
       >
         {value}
       </div>
-    </div>
-  );
-}
-
-// ------------------------------------------------------------
-// 정산 화면 — 통장 입금내역과 한 건씩 맞춰볼 수 있게 정리합니다
-// ------------------------------------------------------------
-function SettlementSheet({
-  dayKey,
-  orders,
-  onClose,
-}: {
-  dayKey: string;
-  orders: Order[];
-  onClose: () => void;
-}) {
-  const [copied, setCopied] = useState(false);
-  const summary = useMemo(() => summarize(orders), [orders]);
-
-  // 통장 대조는 계좌이체만 필요합니다 (시간 순)
-  const transfers = useMemo(
-    () =>
-      orders
-        .map((order, index) => ({ order, seq: index + 1 }))
-        .filter(({ order }) => paymentMethodOf(order) === "계좌이체"),
-    [orders]
-  );
-  const cash = useMemo(
-    () =>
-      orders
-        .map((order, index) => ({ order, seq: index + 1 }))
-        .filter(({ order }) => paymentMethodOf(order) === "현금"),
-    [orders]
-  );
-
-  const label = formatDayLabel(dayKey);
-
-  function asText(): string {
-    const lines = [
-      `[샘뜰 카페] ${dayKey} ${label} 정산`,
-      `주문 ${summary.count}건 · 매출 ${formatPrice(summary.revenue)}`,
-      `계좌이체 ${summary.byMethod.get("계좌이체")?.count ?? 0}건 ${formatPrice(
-        summary.byMethod.get("계좌이체")?.revenue ?? 0
-      )}`,
-      `현금 ${summary.byMethod.get("현금")?.count ?? 0}건 ${formatPrice(
-        summary.byMethod.get("현금")?.revenue ?? 0
-      )}`,
-      `할인 ${formatPrice(summary.discount)} (텀블러 ${summary.tumblers}잔)`,
-      "",
-      "■ 계좌이체 내역 (통장 대조용)",
-      ...(transfers.length === 0
-        ? ["없음"]
-        : transfers.map(
-            ({ order, seq }) =>
-              `#${seq} ${formatTime(order.created_at)} ${order.customer_name} ${formatPrice(
-                order.total
-              )}`
-          )),
-      "",
-      "■ 현금 내역",
-      ...(cash.length === 0
-        ? ["없음"]
-        : cash.map(
-            ({ order, seq }) =>
-              `#${seq} ${formatTime(order.created_at)} ${order.customer_name} ${formatPrice(
-                order.total
-              )}`
-          )),
-    ];
-    return lines.join("\n");
-  }
-
-  async function copyAll() {
-    const text = asText();
-    try {
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        const textarea = document.createElement("textarea");
-        textarea.value = text;
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-      }
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // 복사가 막힌 환경에서는 화면을 보고 옮겨 적으면 됩니다
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4">
-      <div className="flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-3xl bg-white sm:rounded-3xl">
-        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">{label} 정산</h3>
-            <p className="text-xs text-gray-400">{dayKey}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-xl bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-500 transition hover:bg-gray-200"
-          >
-            닫기
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-5 py-4">
-          {/* 합계 */}
-          <div className="rounded-2xl bg-gray-50 p-4">
-            <Row label="총 매출" value={formatPrice(summary.revenue)} strong />
-            <Row label="주문 수" value={`${summary.count}건`} />
-            <div className="my-2 border-t border-gray-200" />
-            <Row
-              label="계좌이체"
-              value={`${summary.byMethod.get("계좌이체")?.count ?? 0}건 · ${formatPrice(
-                summary.byMethod.get("계좌이체")?.revenue ?? 0
-              )}`}
-            />
-            <Row
-              label="현금"
-              value={`${summary.byMethod.get("현금")?.count ?? 0}건 · ${formatPrice(
-                summary.byMethod.get("현금")?.revenue ?? 0
-              )}`}
-            />
-            <div className="my-2 border-t border-gray-200" />
-            <Row
-              label="텀블러 할인"
-              value={`${summary.tumblers}잔 · −${formatPrice(summary.discount)}`}
-            />
-          </div>
-
-          {/* 계좌이체 내역 */}
-          <h4 className="mb-2 mt-5 text-sm font-bold text-gray-500">
-            계좌이체 내역 · 통장 입금과 대조
-          </h4>
-          <SettlementList
-            rows={transfers}
-            emptyText="계좌이체 주문이 없습니다."
-            total={summary.byMethod.get("계좌이체")?.revenue ?? 0}
-          />
-
-          {/* 현금 내역 */}
-          <h4 className="mb-2 mt-5 text-sm font-bold text-gray-500">현금 내역</h4>
-          <SettlementList
-            rows={cash}
-            emptyText="현금 주문이 없습니다."
-            total={summary.byMethod.get("현금")?.revenue ?? 0}
-          />
-
-          <p className="mt-4 text-xs text-gray-400">
-            * 통장에는 손님이 직접 이체하므로 입금자명이 주문자 이름과 다를 수 있습니다.
-            금액과 시각을 먼저 맞춰 보세요.
-            <br />* 포스를 쓰기 전(손님이 직접 주문하던 시절) 주문은 결제수단이 따로
-            기록되어 있지 않아 모두 계좌이체로 표시됩니다.
-          </p>
-        </div>
-
-        <div className="border-t border-gray-100 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <button
-            onClick={copyAll}
-            className={`w-full rounded-2xl py-3.5 font-bold text-white transition ${
-              copied ? "bg-green-500" : "bg-blue-500 hover:bg-blue-600"
-            }`}
-          >
-            {copied ? "복사했습니다 ✓" : "정산 내용 복사하기"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Row({
-  label,
-  value,
-  strong,
-}: {
-  label: string;
-  value: string;
-  strong?: boolean;
-}) {
-  return (
-    <div className="flex items-baseline justify-between py-0.5">
-      <span className="text-sm text-gray-500">{label}</span>
-      <span
-        className={
-          strong ? "text-xl font-bold text-blue-600" : "font-semibold text-gray-900"
-        }
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function SettlementList({
-  rows,
-  emptyText,
-  total,
-}: {
-  rows: { order: Order; seq: number }[];
-  emptyText: string;
-  total: number;
-}) {
-  if (rows.length === 0) {
-    return <p className="rounded-2xl bg-gray-50 px-4 py-5 text-center text-sm text-gray-400">{emptyText}</p>;
-  }
-  return (
-    <div className="overflow-hidden rounded-2xl border border-gray-100">
-      <table className="w-full text-sm">
-        <tbody>
-          {rows.map(({ order, seq }) => (
-            <tr key={order.id} className="border-b border-gray-50 last:border-0">
-              <td className="w-12 py-2.5 pl-3 text-xs font-bold text-gray-400">#{seq}</td>
-              <td className="py-2.5 text-gray-500">{formatTime(order.created_at)}</td>
-              <td className="max-w-0 truncate py-2.5 font-medium text-gray-900">
-                {order.customer_name}
-              </td>
-              <td className="py-2.5 pr-3 text-right font-bold text-gray-900">
-                {formatPrice(order.total)}
-              </td>
-            </tr>
-          ))}
-          <tr className="bg-gray-50">
-            <td colSpan={3} className="py-2.5 pl-3 text-xs font-bold text-gray-500">
-              합계 {rows.length}건
-            </td>
-            <td className="py-2.5 pr-3 text-right font-bold text-gray-900">
-              {formatPrice(total)}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      {sub && <div className="text-xs text-gray-400">{sub}</div>}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
-import { dayRange } from "@/lib/date";
+import { dayKeyOf, dayRange } from "@/lib/date";
 import { OrderItem, OrderStatus, PaymentMethod } from "@/lib/types";
 
 export interface NewOrder {
@@ -67,23 +67,34 @@ export async function insertOrder(
   return { legacySchema: true };
 }
 
+/** "3번" 형태의 자동 라벨에서 번호만 꺼냅니다 */
+const AUTO_LABEL = /^(\d+)번$/;
+
 /**
  * 이름을 입력하지 않았을 때 붙일 주문 번호 라벨 ("3번").
- * 그날 몇 번째 주문인지로 매깁니다.
+ *
+ * 그날 주문 수로만 매기면, 잘못 찍은 주문을 삭제했을 때 카운트가 되돌아가
+ * 다음 주문이 같은 번호를 받습니다. (실제로 2026-09-06에 "10번"이 두 건
+ * 생겼습니다) 그래서 이미 쓰인 번호의 최댓값과 주문 수 중 큰 쪽 다음으로
+ * 매깁니다.
  */
 export async function nextOrderLabel(
   supabase: SupabaseClient,
   now: Date = new Date()
 ): Promise<string> {
-  const { start, end } = dayRange(
-    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
-      now.getDate()
-    ).padStart(2, "0")}`
-  );
-  const { count } = await supabase
+  const { start, end } = dayRange(dayKeyOf(now));
+  const { data } = await supabase
     .from("orders")
-    .select("id", { count: "exact", head: true })
+    .select("customer_name")
     .gte("created_at", start.toISOString())
-    .lt("created_at", end.toISOString());
-  return `${(count ?? 0) + 1}번`;
+    .lt("created_at", end.toISOString())
+    .limit(500);
+
+  const rows = (data ?? []) as { customer_name: string | null }[];
+  let highest = 0;
+  for (const row of rows) {
+    const matched = AUTO_LABEL.exec(row.customer_name ?? "");
+    if (matched) highest = Math.max(highest, Number(matched[1]));
+  }
+  return `${Math.max(highest, rows.length) + 1}번`;
 }

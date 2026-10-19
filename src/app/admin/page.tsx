@@ -8,6 +8,7 @@ import SalesTab from "@/components/admin/SalesTab";
 import { MenuItem } from "@/data/menu";
 import { dayKeyOf } from "@/lib/date";
 import { fetchMenu } from "@/lib/menu";
+import { MissingColumn, findMissingColumns } from "@/lib/schema";
 import { getSupabase } from "@/lib/supabase";
 
 type AdminTab = "pos" | "orders" | "sales" | "menu";
@@ -120,6 +121,8 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
   const [refreshKey, setRefreshKey] = useState(0);
   // 주문내역이 보고 있는 날짜 (매출 달력에서 넘어올 수 있게 셸이 들고 있습니다)
   const [historyDay, setHistoryDay] = useState(() => dayKeyOf(new Date()));
+  // DB에 없는 컬럼 (있으면 상단에 계속 경고를 띄웁니다)
+  const [missingColumns, setMissingColumns] = useState<MissingColumn[]>([]);
 
   const supabase = useMemo(() => getSupabase(), []);
 
@@ -136,6 +139,18 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
     refreshMenu();
   }, [refreshMenu]);
 
+  // 스키마 점검은 포스를 열 때 한 번
+  useEffect(() => {
+    if (!supabase) return;
+    let cancelled = false;
+    findMissingColumns(supabase).then((missing) => {
+      if (!cancelled) setMissingColumns(missing);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
+
   if (!supabase) {
     return (
       <main className="mx-auto max-w-xl px-5 py-20 text-center text-gray-600">
@@ -150,6 +165,8 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
 
   return (
     <main className="mx-auto max-w-6xl px-3 py-4 pb-6 sm:px-4 sm:py-5">
+      {missingColumns.length > 0 && <SchemaWarning missing={missingColumns} />}
+
       <header className="mb-4">
         <div className="flex items-center justify-between">
           <div>
@@ -210,5 +227,35 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
         <MenuTab menu={menu} fromDb={menuFromDb} onChanged={refreshMenu} />
       )}
     </main>
+  );
+}
+
+// ------------------------------------------------------------
+// DB 설정이 덜 끝났을 때의 경고
+// 어떤 탭에서도 가려지지 않게 화면 맨 위에 둡니다.
+// (예전에는 결제 직후 접히는 영역 안에 있어서 아무도 보지 못했습니다)
+// ------------------------------------------------------------
+function SchemaWarning({ missing }: { missing: MissingColumn[] }) {
+  return (
+    <div className="mb-4 rounded-2xl border-2 border-red-300 bg-red-50 p-4">
+      <p className="font-bold text-red-700">⚠️ DB 설정이 아직 끝나지 않았습니다</p>
+      <p className="mt-1.5 text-sm text-red-700">
+        주문 금액은 정상 저장되지만,{" "}
+        <span className="font-semibold">
+          {missing.map((m) => m.note).join(" · ")}
+        </span>{" "}
+        는 저장되지 않습니다. 결제수단은 임시로 메모에만 기록됩니다.
+      </p>
+      <p className="mt-2 text-sm text-red-700">
+        Supabase 대시보드 &gt; SQL Editor 에서{" "}
+        <code className="rounded bg-white px-1.5 py-0.5 font-semibold">
+          supabase/recover-2026-10.sql
+        </code>{" "}
+        을 실행한 뒤 이 화면을 새로고침해 주세요.
+      </p>
+      <p className="mt-2 text-xs text-red-400">
+        없는 컬럼: {missing.map((m) => `${m.table}.${m.column}`).join(", ")}
+      </p>
+    </div>
   );
 }
