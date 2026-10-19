@@ -160,18 +160,18 @@ export default function OrdersTab({
   return (
     <section>
       {/* 날짜 이동 */}
-      <div className="mb-3 flex items-center justify-between gap-2 rounded-2xl bg-white px-3 py-2.5 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-2 rounded-2xl bg-paper px-3 py-2.5 shadow-sm">
         <button
           onClick={() => onDayChange(shiftDay(dayKey, -1))}
           aria-label="이전 날"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-gray-200"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brown-soft text-ink-soft transition hover:bg-line"
         >
           ‹
         </button>
         {/* 날짜를 누르면 달력이 열립니다 (지난 날짜로 바로 이동) */}
         <div className="relative min-w-0 text-center">
-          <div className="truncate font-bold text-gray-900">{formatDayLabel(dayKey)}</div>
-          <div className="text-xs text-gray-400">
+          <div className="truncate font-bold text-ink">{formatDayLabel(dayKey)}</div>
+          <div className="text-xs text-ink-faint">
             {dayKey === todayKey ? "오늘 · 실시간 갱신" : `${dayKey} · 눌러서 날짜 선택`}
           </div>
           <input
@@ -187,7 +187,7 @@ export default function OrdersTab({
           {dayKey !== todayKey && (
             <button
               onClick={() => onDayChange(todayKey)}
-              className="rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-600 transition hover:bg-blue-100"
+              className="rounded-xl bg-forest-soft px-3 py-2 text-xs font-bold text-forest transition hover:bg-forest-soft"
             >
               오늘
             </button>
@@ -196,7 +196,7 @@ export default function OrdersTab({
             onClick={() => onDayChange(shiftDay(dayKey, 1))}
             aria-label="다음 날"
             disabled={dayKey >= todayKey}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-gray-200 disabled:opacity-30"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-brown-soft text-ink-soft transition hover:bg-line disabled:opacity-30"
           >
             ›
           </button>
@@ -221,7 +221,7 @@ export default function OrdersTab({
       </div>
 
       {summary.discount > 0 && (
-        <p className="mb-2 px-1 text-xs text-gray-500">
+        <p className="mb-2 px-1 text-xs text-ink-soft">
           🥤 텀블러 {summary.tumblers}잔 · 할인 −{formatPrice(summary.discount)} (할인 전{" "}
           {formatPrice(summary.revenue + summary.discount)})
         </p>
@@ -230,34 +230,34 @@ export default function OrdersTab({
       <button
         onClick={copySummary}
         disabled={!orders || summary.count === 0}
-        className={`mb-4 w-full rounded-2xl py-3 text-sm font-bold text-white transition active:scale-[0.99] disabled:bg-gray-200 disabled:text-gray-400 ${
-          copied ? "bg-green-500" : "bg-gray-900 hover:bg-gray-800"
+        className={`mb-4 w-full rounded-2xl py-3 text-sm font-bold text-white transition active:scale-[0.99] disabled:bg-line disabled:text-ink-faint ${
+          copied ? "bg-forest" : "bg-brown hover:bg-brown-deep"
         }`}
       >
         {copied ? "복사했습니다 ✓" : "📋 이 날 매출 요약 복사"}
       </button>
 
       {summary.pending > 0 && (
-        <p className="mb-3 rounded-xl bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700">
+        <p className="mb-3 rounded-xl bg-sun-soft px-4 py-2.5 text-sm font-semibold text-sun-deep">
           아직 완료 처리하지 않은 주문 {summary.pending}건이 있습니다.
         </p>
       )}
 
       {error && (
-        <p className="mb-4 rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-600">
+        <p className="mb-4 rounded-xl bg-clay-soft px-4 py-2.5 text-sm text-clay">
           {error}
         </p>
       )}
 
       {orders === null ? (
-        <p className="py-16 text-center text-gray-400">불러오는 중...</p>
+        <p className="py-16 text-center text-ink-faint">불러오는 중...</p>
       ) : rows.length === 0 ? (
         <div className="py-16 text-center">
-          <p className="text-gray-400">이 날짜에는 주문이 없습니다.</p>
+          <p className="text-ink-faint">이 날짜에는 주문이 없습니다.</p>
           {latestDay && latestDay !== dayKey && (
             <button
               onClick={() => onDayChange(latestDay)}
-              className="mt-3 rounded-xl bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-600 transition hover:bg-blue-100"
+              className="mt-3 rounded-xl bg-forest-soft px-4 py-2.5 text-sm font-bold text-forest transition hover:bg-forest-soft"
             >
               마지막 주문일({formatDayLabel(latestDay)})로 이동 →
             </button>
@@ -277,7 +277,7 @@ export default function OrdersTab({
         </ul>
       )}
 
-      <p className="mt-4 px-1 text-xs text-gray-400">
+      <p className="mt-4 px-1 text-xs text-ink-faint">
         * 매출은 할인까지 반영된 실제 받은 금액 기준이며, 대기/완료 상태와 무관하게
         모두 포함합니다.
       </p>
@@ -297,14 +297,14 @@ function SummaryCard({
   accent?: boolean;
 }) {
   return (
-    <div className="rounded-2xl bg-white p-3.5 shadow-sm">
-      <div className="text-xs font-medium text-gray-400">{label}</div>
+    <div className="rounded-2xl bg-paper p-3.5 shadow-sm">
+      <div className="text-xs font-medium text-ink-faint">{label}</div>
       <div
-        className={`mt-0.5 text-lg font-bold ${accent ? "text-blue-600" : "text-gray-900"}`}
+        className={`mt-0.5 text-lg font-bold ${accent ? "text-forest" : "text-ink"}`}
       >
         {value}
       </div>
-      {sub && <div className="text-xs text-gray-400">{sub}</div>}
+      {sub && <div className="text-xs text-ink-faint">{sub}</div>}
     </div>
   );
 }
@@ -329,46 +329,46 @@ function OrderRow({
   const discount = order.discount ?? 0;
 
   return (
-    <li className="rounded-2xl bg-white p-4 shadow-sm">
+    <li className="rounded-2xl bg-paper p-4 shadow-sm">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-1.5">
-          <span className="shrink-0 rounded-lg bg-gray-100 px-2 py-1 text-xs font-bold text-gray-500">
+          <span className="shrink-0 rounded-lg bg-brown-soft px-2 py-1 text-xs font-bold text-ink-soft">
             #{seq}
           </span>
-          <span className="truncate font-bold text-gray-900">{order.customer_name}</span>
+          <span className="truncate font-bold text-ink">{order.customer_name}</span>
           <span
             className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${
               method === "현금"
-                ? "bg-gray-100 text-gray-600"
-                : "bg-blue-50 text-blue-600"
+                ? "bg-brown-soft text-ink-soft"
+                : "bg-forest-soft text-forest"
             }`}
           >
             {method}
           </span>
           {order.status === "대기" && (
-            <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-600">
+            <span className="shrink-0 rounded-full bg-sun-soft px-2 py-0.5 text-xs font-bold text-sun-deep">
               대기
             </span>
           )}
         </div>
-        <span className="shrink-0 text-sm text-gray-400">
+        <span className="shrink-0 text-sm text-ink-faint">
           {formatTime(order.created_at)}
         </span>
       </div>
 
-      <ul className="mb-2 text-sm text-gray-600">
+      <ul className="mb-2 text-sm text-ink-soft">
         {order.items.map((item, i) => (
           <li key={i}>· {formatOrderItem(item)}</li>
         ))}
       </ul>
 
-      {order.memo && <p className="mb-2 text-xs text-gray-400">메모: {order.memo}</p>}
+      {order.memo && <p className="mb-2 text-xs text-ink-faint">메모: {order.memo}</p>}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-bold text-gray-900">
+        <span className="font-bold text-ink">
           {formatPrice(order.total)}
           {discount > 0 && (
-            <span className="ml-1.5 text-xs font-medium text-gray-400 line-through">
+            <span className="ml-1.5 text-xs font-medium text-ink-faint line-through">
               {formatPrice(orderSubtotal(order))}
             </span>
           )}
@@ -376,18 +376,18 @@ function OrderRow({
         <div className="flex gap-2">
           {confirmingDelete ? (
             <>
-              <span className="self-center text-xs text-red-500">
+              <span className="self-center text-xs text-clay">
                 매출에서도 제외됩니다
               </span>
               <button
                 onClick={() => onDelete(order)}
-                className="rounded-xl bg-red-500 px-3 py-2 text-sm font-bold text-white transition hover:bg-red-600"
+                className="rounded-xl bg-clay px-3 py-2 text-sm font-bold text-white transition hover:bg-clay/90"
               >
                 정말 삭제
               </button>
               <button
                 onClick={() => setConfirmingDelete(false)}
-                className="rounded-xl bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-200"
+                className="rounded-xl bg-brown-soft px-3 py-2 text-sm font-semibold text-ink-soft transition hover:bg-line"
               >
                 취소
               </button>
@@ -396,7 +396,7 @@ function OrderRow({
             <>
               <button
                 onClick={() => setConfirmingDelete(true)}
-                className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-500 transition hover:bg-red-100"
+                className="rounded-xl bg-clay-soft px-3 py-2 text-sm font-semibold text-clay transition hover:bg-clay/15"
               >
                 삭제
               </button>
@@ -404,7 +404,7 @@ function OrderRow({
                 onClick={() =>
                   onUpdateStatus(order, order.status === "완료" ? "대기" : "완료")
                 }
-                className="rounded-xl bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-200"
+                className="rounded-xl bg-brown-soft px-3 py-2 text-sm font-semibold text-ink-soft transition hover:bg-line"
               >
                 {order.status === "완료" ? "대기로" : "완료 처리 ✓"}
               </button>

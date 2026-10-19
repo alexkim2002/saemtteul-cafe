@@ -135,30 +135,30 @@ export default function SalesTab({
   return (
     <section>
       {error && (
-        <p className="mb-4 rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-600">
+        <p className="mb-4 rounded-xl bg-clay-soft px-4 py-2.5 text-sm text-clay">
           {error}
         </p>
       )}
 
       {/* 달력 카드 */}
-      <div className="rounded-3xl bg-white p-5 shadow-sm">
+      <div className="rounded-3xl bg-paper p-5 shadow-sm">
         {/* 월 이동 */}
         <div className="mb-4 flex items-center justify-between">
           <button
             onClick={() => moveMonth(-1)}
             aria-label="이전 달"
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-gray-200"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-brown-soft text-ink-soft transition hover:bg-line"
           >
             ‹
           </button>
           <div className="text-center">
-            <div className="text-lg font-bold text-gray-900">
+            <div className="text-lg font-bold text-ink">
               {year}년 {month + 1}월
             </div>
             {orders !== null && (
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-ink-faint">
                 이달 매출{" "}
-                <span className="font-bold text-blue-600">
+                <span className="font-bold text-forest">
                   {formatPrice(monthRevenue)}
                 </span>{" "}
                 · {monthCount}건
@@ -168,7 +168,7 @@ export default function SalesTab({
           <button
             onClick={() => moveMonth(1)}
             aria-label="다음 달"
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-gray-200"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-brown-soft text-ink-soft transition hover:bg-line"
           >
             ›
           </button>
@@ -180,7 +180,7 @@ export default function SalesTab({
             <div
               key={d}
               className={
-                i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-gray-400"
+                i === 0 ? "text-clay" : i === 6 ? "text-ice" : "text-ink-faint"
               }
             >
               {d}
@@ -190,7 +190,7 @@ export default function SalesTab({
 
         {/* 날짜 칸 */}
         {orders === null ? (
-          <p className="py-14 text-center text-sm text-gray-400">불러오는 중...</p>
+          <p className="py-14 text-center text-sm text-ink-faint">불러오는 중...</p>
         ) : (
           <div className="grid grid-cols-7 gap-y-1">
             {cells.map((day, i) => {
@@ -204,7 +204,7 @@ export default function SalesTab({
                   key={key}
                   onClick={() => setSelectedDay(key)}
                   className={`mx-auto flex h-14 w-full max-w-14 flex-col items-center justify-center rounded-2xl transition ${
-                    isSelected ? "bg-blue-500" : "hover:bg-gray-50"
+                    isSelected ? "bg-forest" : "hover:bg-cream"
                   }`}
                 >
                   <span
@@ -212,8 +212,8 @@ export default function SalesTab({
                       isSelected
                         ? "font-bold text-white"
                         : isToday
-                          ? "font-bold text-blue-600"
-                          : "font-medium text-gray-700"
+                          ? "font-bold text-forest"
+                          : "font-medium text-ink"
                     }`}
                   >
                     {day}
@@ -221,9 +221,9 @@ export default function SalesTab({
                   <span
                     className={`text-[10px] leading-tight ${
                       isSelected
-                        ? "text-blue-100"
+                        ? "text-forest-soft"
                         : stat
-                          ? "font-semibold text-blue-500"
+                          ? "font-semibold text-forest"
                           : "text-transparent"
                     }`}
                   >
@@ -240,12 +240,12 @@ export default function SalesTab({
       {orders !== null && (
         <div className="mt-5">
           {!selectedDay ? (
-            <p className="py-8 text-center text-sm text-gray-400">
+            <p className="py-8 text-center text-sm text-ink-faint">
               달력에서 날짜를 누르면 그날 매출을 볼 수 있어요.
             </p>
           ) : !dayDetail ? null : (
             <>
-              <h2 className="mb-3 px-1 text-sm font-bold text-gray-500">
+              <h2 className="mb-3 px-1 text-sm font-bold text-ink-soft">
                 {selectedLabel} 매출
               </h2>
 
@@ -272,20 +272,20 @@ export default function SalesTab({
 
               <button
                 onClick={() => onOpenDay(selectedDay)}
-                className="mb-5 w-full rounded-2xl bg-white py-3 text-sm font-bold text-blue-600 shadow-sm transition hover:bg-blue-50"
+                className="mb-5 w-full rounded-2xl bg-paper py-3 text-sm font-bold text-forest shadow-sm transition hover:bg-forest-soft"
               >
                 이 날 주문내역 보기 →
               </button>
 
               {dayDetail.menuRows.length === 0 ? (
-                <p className="py-8 text-center text-sm text-gray-400">
+                <p className="py-8 text-center text-sm text-ink-faint">
                   이 날짜에는 주문이 없습니다.
                 </p>
               ) : (
-                <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
+                <div className="overflow-hidden rounded-2xl bg-paper shadow-sm">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-gray-100 text-left text-gray-400">
+                      <tr className="border-b border-line text-left text-ink-faint">
                         <th className="px-5 py-3 font-semibold">메뉴</th>
                         <th className="px-5 py-3 text-right font-semibold">수량</th>
                         <th className="px-5 py-3 text-right font-semibold">매출</th>
@@ -295,15 +295,15 @@ export default function SalesTab({
                       {dayDetail.menuRows.map((row) => (
                         <tr
                           key={row.name}
-                          className="border-b border-gray-50 last:border-0"
+                          className="border-b border-line last:border-0"
                         >
-                          <td className="px-5 py-3 font-medium text-gray-900">
+                          <td className="px-5 py-3 font-medium text-ink">
                             {row.name}
                           </td>
-                          <td className="px-5 py-3 text-right text-gray-600">
+                          <td className="px-5 py-3 text-right text-ink-soft">
                             {row.quantity}개
                           </td>
-                          <td className="px-5 py-3 text-right font-bold text-gray-900">
+                          <td className="px-5 py-3 text-right font-bold text-ink">
                             {formatPrice(row.revenue)}
                           </td>
                         </tr>
@@ -315,7 +315,7 @@ export default function SalesTab({
             </>
           )}
 
-          <p className="mt-3 px-1 text-xs text-gray-400">
+          <p className="mt-3 px-1 text-xs text-ink-faint">
             * 총 매출은 할인까지 반영된 실제 받은 금액입니다. 메뉴별 매출은 할인 전
             정가 기준이라 합계가 조금 클 수 있습니다.
             {dayDetail && dayDetail.summary.discount > 0 && (
@@ -342,10 +342,10 @@ function StatCard({
   sub?: string;
 }) {
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm">
-      <div className="text-xs font-medium text-gray-400">{label}</div>
-      <div className="mt-1 text-lg font-bold text-gray-900">{value}</div>
-      {sub && <div className="mt-0.5 text-xs text-gray-400">{sub}</div>}
+    <div className="rounded-2xl bg-paper p-4 shadow-sm">
+      <div className="text-xs font-medium text-ink-faint">{label}</div>
+      <div className="mt-1 text-lg font-bold text-ink">{value}</div>
+      {sub && <div className="mt-0.5 text-xs text-ink-faint">{sub}</div>}
     </div>
   );
 }

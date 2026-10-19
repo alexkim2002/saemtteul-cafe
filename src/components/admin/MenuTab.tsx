@@ -70,18 +70,18 @@ export default function MenuTab({
 
   if (!fromDb) {
     return (
-      <section className="rounded-2xl bg-white px-5 py-8 text-center text-sm text-gray-600 shadow-sm">
-        <p className="text-base font-semibold text-gray-900">
+      <section className="rounded-2xl bg-paper px-5 py-8 text-center text-sm text-ink-soft shadow-sm">
+        <p className="text-base font-semibold text-ink">
           ⚠️ 메뉴 테이블(menu_items)이 아직 준비되지 않았습니다.
         </p>
         <p className="mt-2">
           Supabase 대시보드 &gt; SQL Editor에서 프로젝트의{" "}
-          <code className="rounded bg-gray-100 px-1.5 py-0.5">
+          <code className="rounded bg-brown-soft px-1.5 py-0.5">
             supabase/schema.sql
           </code>{" "}
           내용을 실행하면 메뉴 테이블이 만들어지고 기본 메뉴가 채워집니다.
         </p>
-        <p className="mt-2 text-gray-400">
+        <p className="mt-2 text-ink-faint">
           그 전까지 주문 페이지는 코드에 내장된 예비 메뉴를 표시합니다.
         </p>
       </section>
@@ -91,19 +91,19 @@ export default function MenuTab({
   return (
     <section>
       <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-gray-500">
-          총 {menu.length}개 메뉴 · ⭐를 누르면 포스 첫 화면에 모입니다
+        <p className="min-w-0 text-sm text-ink-soft">
+          총 {menu.length}개 메뉴 · ⭐는 포스 첫 화면에 모입니다
         </p>
         <button
           onClick={() => setEditing("new")}
-          className="rounded-xl bg-blue-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-600"
+          className="shrink-0 whitespace-nowrap rounded-xl bg-forest px-4 py-2 text-sm font-bold text-white transition hover:bg-forest-deep"
         >
           + 메뉴 추가
         </button>
       </div>
 
       {error && (
-        <p className="mb-4 rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-600">
+        <p className="mb-4 rounded-xl bg-clay-soft px-4 py-2.5 text-sm text-clay">
           {error}
         </p>
       )}
@@ -112,33 +112,33 @@ export default function MenuTab({
         {sortMenuItems(menu).map((item) => (
           <li
             key={item.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white px-5 py-3.5 shadow-sm"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-paper px-5 py-3.5 shadow-sm"
           >
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500">
+                <span className="rounded-full bg-brown-soft px-2 py-0.5 text-xs font-semibold text-ink-soft">
                   {item.category}
                 </span>
                 <span
                   className={`font-semibold ${
-                    item.soldOut ? "text-gray-300 line-through" : "text-gray-900"
+                    item.soldOut ? "text-ink-faint line-through" : "text-ink"
                   }`}
                 >
                   {item.name}
                 </span>
                 {item.hasTemperature && (
-                  <span className="text-xs text-gray-300">HOT/ICE</span>
+                  <span className="text-xs text-ink-faint">HOT/ICE</span>
                 )}
               </div>
               {item.description && (
-                <div className="mt-0.5 text-xs text-gray-400">
+                <div className="mt-0.5 text-xs text-ink-faint">
                   {item.description}
                 </div>
               )}
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
-              <span className="w-20 text-right font-bold text-gray-900">
+              <span className="w-20 text-right font-bold text-ink">
                 {formatPrice(item.price)}
               </span>
               <button
@@ -147,8 +147,8 @@ export default function MenuTab({
                 title="포스 첫 화면(⭐ 자주 쓰는)에 올리기"
                 className={`rounded-lg px-2.5 py-1.5 text-sm leading-none transition ${
                   item.favorite
-                    ? "bg-amber-50 hover:bg-amber-100"
-                    : "bg-gray-100 opacity-40 hover:opacity-100"
+                    ? "bg-sun-soft hover:bg-sun/30"
+                    : "bg-brown-soft opacity-40 hover:opacity-100"
                 }`}
               >
                 {item.favorite ? "⭐" : "☆"}
@@ -157,21 +157,21 @@ export default function MenuTab({
                 onClick={() => toggleSoldOut(item)}
                 className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition ${
                   item.soldOut
-                    ? "bg-red-50 text-red-500 hover:bg-red-100"
-                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                    ? "bg-clay-soft text-clay hover:bg-clay/15"
+                    : "bg-brown-soft text-ink-soft hover:bg-line"
                 }`}
               >
                 {item.soldOut ? "품절 중" : "판매 중"}
               </button>
               <button
                 onClick={() => setEditing(item)}
-                className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-200"
+                className="rounded-lg bg-brown-soft px-2.5 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-line"
               >
                 수정
               </button>
               <button
                 onClick={() => remove(item)}
-                className="rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-500 transition hover:bg-red-100"
+                className="rounded-lg bg-clay-soft px-2.5 py-1.5 text-xs font-semibold text-clay transition hover:bg-clay/15"
               >
                 삭제
               </button>
@@ -247,35 +247,35 @@ function MenuEditModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-forest-deep/50 p-4"
       onClick={onClose}
     >
       <div
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-6 shadow-xl"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl bg-paper p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="mb-4 text-xl font-bold text-gray-900">
+        <h3 className="mb-4 text-xl font-bold text-ink">
           {item ? "메뉴 수정" : "메뉴 추가"}
         </h3>
 
         <div className="space-y-3">
           <label className="block text-sm">
-            <span className="mb-1 block font-medium text-gray-500">이름 *</span>
+            <span className="mb-1 block font-medium text-ink-soft">이름 *</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="예: 아메리카노"
-              className="w-full rounded-xl bg-gray-100 px-4 py-2.5 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl bg-brown-soft px-4 py-2.5 text-ink placeholder:text-ink-faint focus:bg-paper focus:outline-none focus:ring-2 focus:ring-forest"
             />
           </label>
 
           <div className="flex gap-2">
             <label className="block flex-1 text-sm">
-              <span className="mb-1 block font-medium text-gray-500">카테고리</span>
+              <span className="mb-1 block font-medium text-ink-soft">카테고리</span>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded-xl bg-gray-100 px-3 py-2.5 text-gray-900"
+                className="w-full rounded-xl bg-brown-soft px-3 py-2.5 text-ink"
               >
                 {[...new Set([...CATEGORY_ORDER, category])].map((c) => (
                   <option key={c} value={c}>
@@ -285,65 +285,65 @@ function MenuEditModal({
               </select>
             </label>
             <label className="block w-32 text-sm">
-              <span className="mb-1 block font-medium text-gray-500">가격 (원)</span>
+              <span className="mb-1 block font-medium text-ink-soft">가격 (원)</span>
               <input
                 type="number"
                 min={0}
                 step={100}
                 value={price}
                 onChange={(e) => setPrice(Math.max(0, Number(e.target.value)))}
-                className="w-full rounded-xl bg-gray-100 px-4 py-2.5 text-right text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-xl bg-brown-soft px-4 py-2.5 text-right text-ink focus:bg-paper focus:outline-none focus:ring-2 focus:ring-forest"
               />
             </label>
           </div>
 
           <label className="block text-sm">
-            <span className="mb-1 block font-medium text-gray-500">
+            <span className="mb-1 block font-medium text-ink-soft">
               설명 (선택)
             </span>
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="예: 진한 치즈 풍미의 수제 케이크"
-              className="w-full rounded-xl bg-gray-100 px-4 py-2.5 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl bg-brown-soft px-4 py-2.5 text-ink placeholder:text-ink-faint focus:bg-paper focus:outline-none focus:ring-2 focus:ring-forest"
             />
           </label>
 
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-500">
+            <label className="flex items-center gap-2 text-sm font-medium text-ink-soft">
               <input
                 type="checkbox"
                 checked={hasTemperature}
                 onChange={(e) => setHasTemperature(e.target.checked)}
-                className="h-4 w-4 accent-blue-500"
+                className="h-4 w-4 accent-forest"
               />
               HOT/ICE 선택 가능
             </label>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-500">
+            <label className="flex items-center gap-2 text-sm font-medium text-ink-soft">
               표시 순서
               <input
                 type="number"
                 value={sortOrder}
                 onChange={(e) => setSortOrder(Number(e.target.value))}
-                className="w-20 rounded-xl bg-gray-100 px-2 py-1.5 text-right text-gray-900"
+                className="w-20 rounded-xl bg-brown-soft px-2 py-1.5 text-right text-ink"
               />
             </label>
           </div>
         </div>
 
-        {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
+        {error && <p className="mt-3 text-sm text-clay">{error}</p>}
 
         <div className="mt-5 flex gap-2">
           <button
             onClick={onClose}
-            className="w-1/3 rounded-2xl bg-gray-100 py-3.5 font-semibold text-gray-600 transition hover:bg-gray-200"
+            className="w-1/3 rounded-2xl bg-brown-soft py-3.5 font-semibold text-ink-soft transition hover:bg-line"
           >
             취소
           </button>
           <button
             onClick={save}
             disabled={saving}
-            className="flex-1 rounded-2xl bg-blue-500 py-3.5 font-bold text-white transition hover:bg-blue-600 disabled:opacity-50"
+            className="flex-1 rounded-2xl bg-forest py-3.5 font-bold text-white transition hover:bg-forest-deep disabled:opacity-50"
           >
             {saving ? "저장 중..." : item ? "수정 저장" : "메뉴 추가"}
           </button>

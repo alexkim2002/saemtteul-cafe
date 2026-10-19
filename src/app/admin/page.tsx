@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import MenuTab from "@/components/admin/MenuTab";
 import OrdersTab from "@/components/admin/OrdersTab";
@@ -80,9 +81,21 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-5">
-      <div className="rounded-3xl bg-white p-7 shadow-sm">
-        <p className="text-sm font-semibold text-blue-500">✝️ 봉원교회 샘뜰 카페</p>
-        <h1 className="mt-1 mb-6 text-2xl font-bold text-gray-900">포스 로그인</h1>
+      {/* 로고 배경색과 페이지 배경색이 같아 종이에 인쇄된 것처럼 이어집니다 */}
+      <Image
+        src="/logo.webp"
+        alt="샘뜰 카페"
+        width={900}
+        height={472}
+        priority
+        className="mx-auto mb-1 w-full max-w-[16rem]"
+      />
+      <p className="mb-7 text-center text-xs font-semibold tracking-widest text-brown">
+        봉원교회
+      </p>
+
+      <div className="rounded-3xl bg-paper p-7 shadow-sm ring-1 ring-line">
+        <h1 className="mb-5 text-lg font-bold text-ink">포스 로그인</h1>
         <form onSubmit={submit} className="space-y-3">
           <input
             type="password"
@@ -93,13 +106,13 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
             }}
             placeholder="비밀번호"
             autoFocus
-            className="w-full rounded-xl bg-gray-100 px-4 py-3.5 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-xl bg-brown-soft px-4 py-3.5 text-ink placeholder:text-ink-faint focus:bg-paper focus:outline-none focus:ring-2 focus:ring-forest"
           />
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && <p className="text-sm text-clay">{error}</p>}
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-2xl bg-blue-500 py-3.5 font-bold text-white transition hover:bg-blue-600 active:scale-[0.98] disabled:opacity-50"
+            className="w-full rounded-2xl bg-forest py-3.5 font-bold text-white transition hover:bg-forest-deep active:scale-[0.98] disabled:opacity-50"
           >
             {submitting ? "확인 중..." : "입장"}
           </button>
@@ -153,7 +166,7 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
 
   if (!supabase) {
     return (
-      <main className="mx-auto max-w-xl px-5 py-20 text-center text-gray-600">
+      <main className="mx-auto max-w-xl px-5 py-20 text-center text-ink-soft">
         <p className="text-lg font-semibold">⚠️ Supabase 설정이 없습니다.</p>
         <p className="mt-2 text-sm">
           프로젝트 루트에 <code>.env.local</code> 파일을 만들고 값을 채운 뒤 dev
@@ -168,29 +181,36 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
       {missingColumns.length > 0 && <SchemaWarning missing={missingColumns} />}
 
       <header className="mb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-blue-500">✝️ 봉원교회 샘뜰 카페</p>
-            <h1 className="mt-0.5 text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <Image
+              src="/logo.webp"
+              alt="샘뜰 카페"
+              width={900}
+              height={472}
+              priority
+              className="h-11 w-auto sm:h-14"
+            />
+            <span className="shrink-0 rounded-full bg-forest-soft px-2.5 py-1 text-xs font-bold text-forest">
               포스
-            </h1>
+            </span>
           </div>
           <button
             onClick={onLogout}
-            className="rounded-xl bg-gray-100 px-3.5 py-2 text-xs font-semibold text-gray-500 transition hover:bg-gray-200"
+            className="shrink-0 rounded-xl bg-brown-soft px-3.5 py-2 text-xs font-semibold text-ink-soft transition hover:bg-line"
           >
             로그아웃
           </button>
         </div>
-        <nav className="mt-3 flex rounded-2xl bg-gray-200/60 p-1">
+        <nav className="mt-3 flex rounded-2xl bg-brown-soft p-1">
           {TABS.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
               className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition ${
                 tab === key
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "bg-paper text-forest shadow-sm"
+                  : "text-ink-soft hover:text-ink"
               }`}
             >
               {label}
@@ -237,24 +257,15 @@ function PosShell({ onLogout }: { onLogout: () => void }) {
 // ------------------------------------------------------------
 function SchemaWarning({ missing }: { missing: MissingColumn[] }) {
   return (
-    <div className="mb-4 rounded-2xl border-2 border-red-300 bg-red-50 p-4">
-      <p className="font-bold text-red-700">⚠️ DB 설정이 아직 끝나지 않았습니다</p>
-      <p className="mt-1.5 text-sm text-red-700">
-        주문 금액은 정상 저장되지만,{" "}
-        <span className="font-semibold">
-          {missing.map((m) => m.note).join(" · ")}
-        </span>{" "}
-        는 저장되지 않습니다. 결제수단은 임시로 메모에만 기록됩니다.
-      </p>
-      <p className="mt-2 text-sm text-red-700">
-        Supabase 대시보드 &gt; SQL Editor 에서{" "}
-        <code className="rounded bg-white px-1.5 py-0.5 font-semibold">
+    <div className="mb-4 rounded-2xl border border-clay/40 bg-clay-soft px-4 py-3">
+      <p className="font-bold text-clay">⚠️ DB 설정이 아직 끝나지 않았습니다</p>
+      <p className="mt-1 text-sm leading-relaxed text-clay">
+        <span className="font-semibold">{missing.map((m) => m.note).join(" · ")}</span>
+        가 저장되지 않습니다. Supabase SQL Editor에서{" "}
+        <code className="rounded bg-paper px-1 py-0.5 text-xs font-semibold">
           supabase/recover-2026-10.sql
-        </code>{" "}
-        을 실행한 뒤 이 화면을 새로고침해 주세요.
-      </p>
-      <p className="mt-2 text-xs text-red-400">
-        없는 컬럼: {missing.map((m) => `${m.table}.${m.column}`).join(", ")}
+        </code>
+        을 실행한 뒤 새로고침해 주세요.
       </p>
     </div>
   );

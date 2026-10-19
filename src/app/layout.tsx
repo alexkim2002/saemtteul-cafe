@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   // 모바일 브라우저 주소창/상태바를 배경색과 맞춰 앱처럼 보이게
-  themeColor: "#f3f4f6",
+  themeColor: "#fefdf9",
 };
 
 export default function RootLayout({
@@ -18,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className="h-full antialiased">
-      <body className="min-h-full bg-gray-100 text-gray-900">{children}</body>
+      <body className="min-h-full bg-cream text-ink">{children}</body>
     </html>
   );
 }

@@ -1,5 +1,46 @@
 @import "tailwindcss";
 
+/* ============================================================
+   샘뜰 카페 색 — 로고에서 뽑았습니다.
+   올리브그린 워드마크 / 햇살 노랑 / "cafe" 갈색 / 아이보리 배경
+   화면에서 색을 직접 쓰지 말고 아래 토큰(bg-forest, text-sun …)을 쓰세요.
+   ============================================================ */
+@theme {
+  /* 배경 — 로고 이미지 배경과 같은 값이라 로고가 종이에 인쇄된 것처럼 붙습니다 */
+  --color-cream: #fefdf9;
+  --color-paper: #ffffff;
+
+  /* 올리브그린 (로고 워드마크) — 기본 색 */
+  --color-forest: #435332;
+  --color-forest-deep: #2f3c21;
+  --color-forest-mid: #a7b398;
+  --color-forest-soft: #eef1e7;
+
+  /* 햇살 노랑 (로고의 해) — 강조·대기 상태·HOT */
+  --color-sun: #e2a944;
+  --color-sun-deep: #9a6f16;
+  --color-sun-soft: #fbf1dc;
+
+  /* 갈색 (로고의 "cafe") — 보조 버튼·현금 */
+  --color-brown: #715f4d;
+  --color-brown-deep: #574838;
+  --color-brown-soft: #f3efe8;
+
+  /* 찬 음료(ICE) — 올리브·아이보리와 어울리는 차분한 청록 */
+  --color-ice: #4e767e;
+  --color-ice-soft: #e7f0f1;
+
+  /* 경고·삭제 — 붉은색도 따뜻하게 맞춥니다 */
+  --color-clay: #b4452f;
+  --color-clay-soft: #fbeae6;
+
+  /* 글자·선 */
+  --color-ink: #32302a;
+  --color-ink-soft: #7c7567;
+  --color-ink-faint: #a9a295;
+  --color-line: #e9e4d8;
+}
+
 /* 밝은 테마 고정: 기기가 다크모드여도 항상 밝게 표시 */
 :root {
   color-scheme: light;
