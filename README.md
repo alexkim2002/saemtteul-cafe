@@ -25,6 +25,12 @@ Next.js + Tailwind CSS + Supabase로 만든 카페 **포스(POS)** 시스템입�
 
 배포 주소: https://seamtteul-cafe.vercel.app (main 브랜치에 push하면 Vercel이 자동 재배포)
 
+> 로마자 표기는 **saemtteul**(샘뜰)이 맞습니다. 저장소 이름과 코드는 모두 이쪽으로
+> 맞춰 두었습니다. 다만 배포 주소만 예전 표기(`seamtteul-cafe.vercel.app`)로 남아
+> 있는데, 카운터 휴대폰의 홈 화면 바로가기가 끊기지 않게 일부러 그대로 둔 것입니다.
+> 주소까지 바꾸려면 Vercel 프로젝트 설정에서 도메인을 바꾸고 바로가기를 다시
+> 만들어야 합니다.
+
 ---
 
 ## 1. 처음 실행하기
