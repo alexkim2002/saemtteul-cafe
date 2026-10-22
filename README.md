@@ -23,13 +23,12 @@ Next.js + Tailwind CSS + Supabase로 만든 카페 **포스(POS)** 시스템입�
     (달력 칸에 일별 매출 표시, 월 합계 제공)
   - **메뉴** — 메뉴 추가/수정/삭제, 품절 토글 (수정 즉시 주문받기 화면에 반영)
 
-배포 주소: https://seamtteul-cafe.vercel.app (main 브랜치에 push하면 Vercel이 자동 재배포)
+배포 주소: https://saemtteul-cafe.vercel.app (main 브랜치에 push하면 Vercel이 자동 재배포)
 
-> 로마자 표기는 **saemtteul**(샘뜰)이 맞습니다. 저장소 이름과 코드는 모두 이쪽으로
-> 맞춰 두었습니다. 다만 배포 주소만 예전 표기(`seamtteul-cafe.vercel.app`)로 남아
-> 있는데, 카운터 휴대폰의 홈 화면 바로가기가 끊기지 않게 일부러 그대로 둔 것입니다.
-> 주소까지 바꾸려면 Vercel 프로젝트 설정에서 도메인을 바꾸고 바로가기를 다시
-> 만들어야 합니다.
+> 주소를 바꾸려면 **Vercel > 프로젝트 > Settings > General > Project Name** 을
+> `saemtteul-cafe` 로 바꾸면 됩니다. `.vercel.app` 주소가 프로젝트 이름을 따라갑니다.
+> 바꾼 뒤에는 카운터 휴대폰의 홈 화면 바로가기를 새 주소로 다시 만들어 주세요.
+> (예전 주소 `seamtteul-cafe.vercel.app` 는 더 이상 열리지 않습니다)
 
 ---
 
@@ -59,7 +58,7 @@ http://localhost:3000 접속. **Supabase 설정 전에도 화면은 뜨지만**(
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=발급받은_키
-ADMIN_PASSWORD=abc123
+ADMIN_PASSWORD=직접_정한_비밀번호
 ```
 
 5. dev 서버를 재시작합니다 (`Ctrl+C` 후 `npm run dev`).
@@ -74,15 +73,30 @@ ADMIN_PASSWORD=abc123
 
 ## 4. 로그인
 
-- 주소: `/admin` · 비밀번호: `ADMIN_PASSWORD` 환경변수 값 (설정하지 않으면 **abc123**)
+- 주소: `/admin` · 비밀번호: `ADMIN_PASSWORD` 환경변수 값
+- **기본 비밀번호는 없습니다.** 이 저장소는 공개라서 코드에 비밀번호를 두지 않습니다.
+  환경변수를 설정하지 않으면 로그인 자체가 막힙니다.
 - 비밀번호 검증은 서버 API(`/api/admin/login`)에서 하고, 성공 시 httpOnly 세션 쿠키(7일)가
   발급됩니다. 비밀번호는 브라우저에 노출되지 않습니다.
 - 태블릿 한 대로 쓰면 한 번 로그인해 두고 계속 쓰면 됩니다. 기기를 두 대 이상 쓰면
   Supabase Realtime으로 주문내역이 서로 동기화됩니다.
 
-> ⚠️ 남은 보안 한계: 주문/메뉴 데이터의 읽기·쓰기는 여전히 공개 anon 키 + RLS 정책으로
-> 이루어집니다. 교회 내부용으로는 충분하지만, 외부에 완전히 공개할 서비스라면
-> 데이터 작업도 서버 API로 옮기거나 Supabase Auth 기반으로 정책을 좁히세요.
+### 공개 저장소로 운영할 때
+
+이 저장소는 공개입니다. 아래 두 가지만 지키면 됩니다.
+
+1. **비밀번호를 코드에 적지 마세요.** `ADMIN_PASSWORD` 환경변수로만 받습니다.
+2. **`abc123` 은 더 이상 쓰면 안 됩니다.** 공개 전 커밋 기록에 남아 있어서,
+   누구나 `git log` 로 찾을 수 있습니다. Vercel 환경변수에 **새 비밀번호**를
+   넣어 주세요. (기록을 지우는 것보다 비밀번호를 바꾸는 편이 확실합니다)
+
+Supabase 키는 커밋된 적이 없습니다. `.env.local.example` 에 들어 있던 값은
+`eyJhbGciOi...` 같은 예시 문자열이었습니다.
+
+> ⚠️ 남은 보안 한계: 주문/메뉴 데이터의 읽기·쓰기는 공개 anon 키 + RLS 정책으로
+> 이루어집니다. 이건 저장소 공개 여부와 무관하게 원래 그랬습니다 — anon 키는
+> 어차피 브라우저로 내려갑니다. 교회 내부용으로는 충분하지만, 더 조이려면
+> 데이터 작업을 서버 API로 옮기거나 Supabase Auth 기반으로 정책을 좁히세요.
 
 ## 5. 색·로고
 
